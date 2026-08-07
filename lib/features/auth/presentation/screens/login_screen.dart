@@ -1,3 +1,5 @@
+import 'package:brainvault/core/services/auth_services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -11,6 +13,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final AuthService _authService = AuthService();
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
@@ -22,9 +26,52 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _onLogin() {
-    // Navigate to Home Dashboard replacing current route
-    AppRouter.navigateToHome(context);
+  Future<void> _onLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Please enter all fields")));
+      return;
+    }
+
+    try {
+      await _authService.login(email: email, password: password);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Login Successfull")));
+      print("User: ${FirebaseAuth.instance.currentUser}");
+      AppRouter.navigateToHome(context);
+    } on FirebaseAuthException catch (e) {
+      String message = "Login failed.";
+      switch (e.code) {
+        case 'user-not-found':
+          message = "No account found with this email.";
+          break;
+
+        case 'wrong-password':
+          message = "Incorrect password.";
+          break;
+
+        case 'invalid-email':
+          message = "Invalid email address.";
+          break;
+
+        case 'invalid-credential':
+          message = "Email or password is incorrect.";
+          break;
+
+        default:
+          message = e.message ?? "Login failed.";
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
   }
 
   void _onSignUpTap() {
@@ -55,10 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   SizedBox(width: 8),
-                  Text(
-                    '👋',
-                    style: TextStyle(fontSize: 24),
-                  ),
+                  Text('👋', style: TextStyle(fontSize: 24)),
                 ],
               ),
               const SizedBox(height: 6),
@@ -101,7 +145,9 @@ class _LoginScreenState extends State<LoginScreen> {
               // Divider "or"
               Row(
                 children: const [
-                  Expanded(child: Divider(color: AppColors.borderLight, thickness: 1)),
+                  Expanded(
+                    child: Divider(color: AppColors.borderLight, thickness: 1),
+                  ),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16.0),
                     child: Text(
@@ -112,7 +158,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  Expanded(child: Divider(color: AppColors.borderLight, thickness: 1)),
+                  Expanded(
+                    child: Divider(color: AppColors.borderLight, thickness: 1),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -256,7 +304,10 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primaryViolet, width: 1.5),
+        borderSide: const BorderSide(
+          color: AppColors.primaryViolet,
+          width: 1.5,
+        ),
       ),
     );
   }

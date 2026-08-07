@@ -1,3 +1,4 @@
+import 'package:brainvault/features/auth/auth_wrapper.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -24,7 +25,13 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     // Navigate to Onboarding screen
-    Navigator.of(context).pushReplacementNamed(AppRouter.onboarding);
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) {
+          return const AuthWrapper();
+        },
+      ),
+    );
   }
 
   @override
@@ -33,9 +40,7 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: AppColors.purpleGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppColors.purpleGradient),
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32.0),
