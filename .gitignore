@@ -1,98 +1,129 @@
-        # Miscellaneous
-        *.class
-        *.log
-        *.pyc
-        *.swp
-        .DS_Store
-        .atom/
-        .build/
-        .buildlog/
-        .history
-        .svn/
-        .swiftpm/
-        migrate_working_dir/
+# ============================================================
+# Flutter / Dart
+# ============================================================
 
-        # IntelliJ related
-        *.iml
-        *.ipr
-        *.iws
-        .idea/
+.dart_tool/
+build/
+.pub/
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+coverage/
 
-        # The .vscode folder contains launch configuration and tasks you configure in
-        # VS Code which you may wish to be included in version control, so this line
-        # is commented out by default.
-        #.vscode/
+# Generated documentation
+**/doc/api/
 
-        # Flutter/Dart/Pub related
-        **/doc/api/
-        **/ios/Flutter/.last_build_id
-        .dart_tool/
-        build/
-        .flutter-plugins
-        .flutter-plugins-dependencies
-        .pub-cache/
-        .pub/
-        coverage/   
+# Flutter generated build ID
+**/ios/Flutter/.last_build_id
 
-        # Symbolication related
-        app.*.symbols
-
-        # Obfuscation related
-        app.*.map.json
-
-        # Android Studio will place build artifacts here
-        /android/app/debug
-        /android/app/profile
-        /android/app/release
+# Flutter symbolication / obfuscation
+app.*.symbols
+app.*.map.json
 
 
+# ============================================================
+# Android
+# ============================================================
 
-    # ==============================
-    # Environment & Secrets
-    # ==============================
-    .env
-    .env.*
-    *.env
+# Generated Android build files
+/android/app/debug/
+/android/app/profile/
+/android/app/release/
 
-    # API keys & secrets
-    secrets.json
-    keys.json
-    config.json
+# Android signing / private keys
+*.jks
+*.keystore
+key.properties
 
-    # Firebase service accounts (Backend only)
-    service-account.json
-    firebase-adminsdk*.json
 
-    # Android signing keys
-    *.jks
-    *.keystore
-    key.properties
+# ============================================================
+# iOS
+# ============================================================
 
-    # iOS signing files
-    *.p12
-    *.mobileprovision
+# Generated iOS files
+**/ios/Flutter/ephemeral/
 
-    # ==============================
-    # IDE
-    .idea/
-    *.iml
-    .vscode/
-    # ==============================
-    # macOS
-    # ==============================
-    macos/Flutter/ephemeral/
+# iOS signing / provisioning files
+*.p12
+*.mobileprovision
 
-    # ==============================
-    # Windows
-    # ==============================
-    windows/flutter/ephemeral/
 
-    # ==============================
-    # Linux
-    # ==============================
-    linux/flutter/ephemeral/
+# ============================================================
+# macOS
+# ============================================================
 
-    # ==============================
-    # Generated Flutter files
-    # ==============================
-    .flutter-plugins
+macos/Flutter/ephemeral/
+
+
+# ============================================================
+# Windows
+# ============================================================
+
+windows/flutter/ephemeral/
+
+
+# ============================================================
+# Linux
+# ============================================================
+
+linux/flutter/ephemeral/
+
+
+# ============================================================
+# IDE
+# ============================================================
+
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# VS Code
+.vscode/
+
+
+# ============================================================
+# Environment & Secrets
+# ============================================================
+
+.env
+.env.*
+*.env
+
+# API keys / secrets
+secrets.json
+keys.json
+config.json
+
+# Firebase Admin SDK / service accounts
+service-account.json
+firebase-adminsdk*.json
+
+
+# ============================================================
+# Miscellaneous
+# ============================================================
+
+*.class
+*.log
+*.pyc
+*.swp
+
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history/
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+
+# ============================================================
+# OS / Temporary files
+# ============================================================
+
+Thumbs.db
+ehthumbs.db
+Desktop.ini
