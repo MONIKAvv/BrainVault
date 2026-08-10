@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
@@ -49,17 +50,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  void _onSkip() {
+  Future<void> _completeOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onBoarding Completed', true);
+  }
+
+  void _onSkip() async {
+    await _completeOnboarding();
+    if (!mounted) return;
     AppRouter.navigateToLogin(context);
   }
 
-  void _onNext() {
+  void _onNext() async {
     if (_currentIndex < _pages.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeInOut,
       );
     } else {
+      await _completeOnboarding();
+      if (!mounted) return;
       AppRouter.navigateToLogin(context);
     }
   }

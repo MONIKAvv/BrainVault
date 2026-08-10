@@ -278,16 +278,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
         border: Border(top: BorderSide(color: AppColors.borderLight, width: 1)),
       ),
       child: BottomNavigationBar(
-        currentIndex: 4,
+        currentIndex: 6, // Profile index
         onTap: (index) {
           if (index == 0) {
             Navigator.pushReplacementNamed(context, AppRouter.home);
           } else if (index == 1) {
             Navigator.pushReplacementNamed(context, AppRouter.notesList);
           } else if (index == 2) {
-            Navigator.pushReplacementNamed(context, AppRouter.aiAssistant);
+            Navigator.pushReplacementNamed(context, AppRouter.mindmap);
           } else if (index == 3) {
+            Navigator.pushReplacementNamed(context, AppRouter.aiAssistant);
+          } else if (index == 4) {
+            Navigator.pushReplacementNamed(context, AppRouter.summary);
+          } else if (index == 5) {
             Navigator.pushReplacementNamed(context, AppRouter.tasks);
+          } else if (index == 6) {
+            // Already here
           }
         },
         type: BottomNavigationBarType.fixed,
@@ -295,11 +301,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         selectedItemColor: AppColors.primaryViolet,
         unselectedItemColor: AppColors.textDarkSecondary,
         selectedLabelStyle: const TextStyle(
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
         unselectedLabelStyle: const TextStyle(
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: FontWeight.w500,
         ),
         elevation: 0,
@@ -313,8 +319,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             label: 'Notes',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.account_tree_outlined),
+            label: 'Mind Map',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.auto_awesome_outlined),
             label: 'AI',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.summarize_outlined),
+            label: 'Summary',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.check_box_outlined),

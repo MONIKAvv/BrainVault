@@ -17,6 +17,9 @@ import '../features/profile/presentation/screens/profile_screen.dart';
 import '../features/scanner/presentation/screens/scanner_screen.dart';
 import '../features/tasks/presentation/screens/tasks_screen.dart';
 
+import '../features/mindmap/presentation/screens/mindmap_screen.dart';
+import '../features/summary/presentation/screens/summary_screen.dart';
+
 /// Navigation router for BrainVault.
 /// Manages named routes and transitions across the app.
 class AppRouter {
@@ -40,6 +43,8 @@ class AppRouter {
   static const String voiceNote = '/voice_note';
   static const String remainder = '/remainder';
   static const String search = '/search';
+  static const String mindmap = '/mindmap';
+  static const String summary = '/summary';
 
   /// Named routes table
   static Map<String, WidgetBuilder> get routes => {
@@ -60,6 +65,8 @@ class AppRouter {
     voiceNote: (context) => const VoiceNotesScreen(),
     remainder: (context) => const RemainderScreen(),
     search: (context) => const SearchScreen(),
+    mindmap: (context) => const MindMapScreen(),
+    summary: (context) => const SummaryScreen(),
   };
 
   /// Route generator fallback & dynamic routing
@@ -99,6 +106,10 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const RemainderScreen());
       case search:
         return MaterialPageRoute(builder: (_) => const SearchScreen());
+      case mindmap:
+        return MaterialPageRoute(builder: (_) => const MindMapScreen());
+      case summary:
+        return MaterialPageRoute(builder: (_) => const SummaryScreen());
       default:
         return MaterialPageRoute(builder: (_) => const LoginScreen());
     }

@@ -488,13 +488,19 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _selectedBottomIndex = index;
           });
-          if (index == 1) {
+          if (index == 0) {
+            // Already home
+          } else if (index == 1) {
             Navigator.pushNamed(context, AppRouter.notesList);
           } else if (index == 2) {
-            Navigator.pushNamed(context, AppRouter.aiAssistant);
+            Navigator.pushNamed(context, AppRouter.mindmap);
           } else if (index == 3) {
-            Navigator.pushNamed(context, AppRouter.tasks);
+            Navigator.pushNamed(context, AppRouter.aiAssistant);
           } else if (index == 4) {
+            Navigator.pushNamed(context, AppRouter.summary);
+          } else if (index == 5) {
+            Navigator.pushNamed(context, AppRouter.tasks);
+          } else if (index == 6) {
             Navigator.pushNamed(context, AppRouter.profile);
           }
         },
@@ -503,11 +509,11 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedItemColor: AppColors.primaryViolet,
         unselectedItemColor: AppColors.textDarkSecondary,
         selectedLabelStyle: const TextStyle(
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
         unselectedLabelStyle: const TextStyle(
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: FontWeight.w500,
         ),
         elevation: 0,
@@ -521,8 +527,16 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Notes',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.account_tree_outlined),
+            label: 'Mind Map',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.auto_awesome_outlined),
             label: 'AI',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.summarize_outlined),
+            label: 'Summary',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.check_box_outlined),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/repositories/vault_repository.dart';
 
 /// Screen #8: All Notes List
 class NotesListScreen extends StatefulWidget {
@@ -13,9 +14,28 @@ class NotesListScreen extends StatefulWidget {
 class _NotesListScreenState extends State<NotesListScreen> {
   int _selectedFilterIndex = 0;
   final List<String> _filters = ['All', 'Pinned', 'Folders'];
+  final VaultRepository _repository = VaultRepository.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _repository.addListener(_onRepositoryChanged);
+  }
+
+  @override
+  void dispose() {
+    _repository.removeListener(_onRepositoryChanged);
+    super.dispose();
+  }
+
+  void _onRepositoryChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
+    final notes = _repository.notes;
+
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
@@ -59,64 +79,25 @@ class _NotesListScreenState extends State<NotesListScreen> {
 
               // Notes List
               Expanded(
-                child: ListView(
+                child: ListView.builder(
                   physics: const BouncingScrollPhysics(),
-                  children: [
-                    _buildNoteCard(
-                      title: 'Project Ideas',
-                      subtitle: 'Today, 9:30 AM',
-                      iconBg: AppColors.noteOrangeBg,
-                      iconColor: AppColors.noteOrangeIcon,
-                      icon: Icons.edit_note_rounded,
-                      onTap: () {
-                        Navigator.pushNamed(context, AppRouter.noteEditor);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _buildNoteCard(
-                      title: 'Study Plan',
-                      subtitle: 'Today, 8:15 AM',
-                      iconBg: AppColors.notePurpleBg,
-                      iconColor: AppColors.notePurpleIcon,
-                      icon: Icons.article_outlined,
-                      onTap: () {
-                        Navigator.pushNamed(context, AppRouter.noteEditor);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _buildNoteCard(
-                      title: 'Book Summary',
-                      subtitle: 'Yesterday, 6:45 PM',
-                      iconBg: const Color(0xFFECFDF5),
-                      iconColor: const Color(0xFF10B981),
-                      icon: Icons.menu_book_outlined,
-                      onTap: () {
-                        Navigator.pushNamed(context, AppRouter.noteEditor);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _buildNoteCard(
-                      title: 'Workout Plan',
-                      subtitle: 'Yesterday, 5:20 PM',
-                      iconBg: const Color(0xFFEFF6FF),
-                      iconColor: const Color(0xFF3B82F6),
-                      icon: Icons.fitness_center_rounded,
-                      onTap: () {
-                        Navigator.pushNamed(context, AppRouter.noteEditor);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _buildNoteCard(
-                      title: 'My Thoughts',
-                      subtitle: '12 May, 10:30 PM',
-                      iconBg: const Color(0xFFFDF2F8),
-                      iconColor: const Color(0xFFEC4899),
-                      icon: Icons.favorite_border_rounded,
-                      onTap: () {
-                        Navigator.pushNamed(context, AppRouter.noteEditor);
-                      },
-                    ),
-                  ],
+                  itemCount: notes.length,
+                  itemBuilder: (context, index) {
+                    final note = notes[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: _buildNoteCard(
+                        title: note.title,
+                        subtitle: note.subtitle,
+                        iconBg: note.iconBg,
+                        iconColor: note.iconColor,
+                        icon: note.icon,
+                        onTap: () {
+                          Navigator.pushNamed(context, AppRouter.noteEditor);
+                        },
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -137,25 +118,33 @@ class _NotesListScreenState extends State<NotesListScreen> {
   }
 
   Widget _buildSearchBar() {
-    return Row(
-      children: const [
-        Icon(
-          Icons.search_rounded,
-          color: AppColors.textDarkSecondary,
-          size: 20,
-        ),
-        SizedBox(width: 10),
-        Expanded(
-          child: TextField(
-            decoration: InputDecoration(
-              hintText: 'Search notes...',
-              hintStyle: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
-              border: InputBorder.none,
-              isDense: true,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Row(
+        children: const [
+          Icon(
+            Icons.search_rounded,
+            color: AppColors.textDarkSecondary,
+            size: 20,
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search notes...',
+                hintStyle: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+                border: InputBorder.none,
+                isDense: true,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -277,15 +266,21 @@ class _NotesListScreenState extends State<NotesListScreen> {
         border: Border(top: BorderSide(color: AppColors.borderLight, width: 1)),
       ),
       child: BottomNavigationBar(
-        currentIndex: 1,
+        currentIndex: 1, // Notes index
         onTap: (index) {
           if (index == 0) {
             Navigator.pushReplacementNamed(context, AppRouter.home);
+          } else if (index == 1) {
+            // Already here
           } else if (index == 2) {
-            Navigator.pushReplacementNamed(context, AppRouter.aiAssistant);
+            Navigator.pushReplacementNamed(context, AppRouter.mindmap);
           } else if (index == 3) {
-            Navigator.pushReplacementNamed(context, AppRouter.tasks);
+            Navigator.pushReplacementNamed(context, AppRouter.aiAssistant);
           } else if (index == 4) {
+            Navigator.pushReplacementNamed(context, AppRouter.summary);
+          } else if (index == 5) {
+            Navigator.pushReplacementNamed(context, AppRouter.tasks);
+          } else if (index == 6) {
             Navigator.pushReplacementNamed(context, AppRouter.profile);
           }
         },
@@ -294,11 +289,11 @@ class _NotesListScreenState extends State<NotesListScreen> {
         selectedItemColor: AppColors.primaryViolet,
         unselectedItemColor: AppColors.textDarkSecondary,
         selectedLabelStyle: const TextStyle(
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
         unselectedLabelStyle: const TextStyle(
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: FontWeight.w500,
         ),
         elevation: 0,
@@ -312,8 +307,16 @@ class _NotesListScreenState extends State<NotesListScreen> {
             label: 'Notes',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.account_tree_outlined),
+            label: 'Mind Map',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.auto_awesome_outlined),
             label: 'AI',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.summarize_outlined),
+            label: 'Summary',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.check_box_outlined),

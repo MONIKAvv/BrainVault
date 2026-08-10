@@ -1,8 +1,10 @@
+import 'package:brainvault/app/router.dart';
 import 'package:brainvault/features/auth/auth_wrapper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,16 +17,39 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _navigateToOnboarding();
+    _navigate();
   }
 
-  Future<void> _navigateToOnboarding() async {
+  Future<void> _navigate() async {
     // Wait for 3 seconds before navigating
     await Future.delayed(const Duration(seconds: 3));
 
     if (!mounted) return;
 
-    // Navigate to Onboarding screen
+    // checking if onboarding has been completed
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    final bool onboardingCompleted =
+        prefs.getBool('onBoarding Completed') ?? false;
+
+    // check firebase authentication
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+    print("onBoarding Completed ${onboardingCompleted}");
+    print('Current user: ${currentUser}');
+
+    if (!onboardingCompleted) {
+      // first time user
+      Navigator.of(context).pushReplacementNamed(AppRouter.onboarding);
+      return;
+    }
+
+    if (currentUser != null) {
+      // user is already logged in and onboarding is completed -> go to home directly
+      AppRouter.navigateToHome(context);
+      return;
+    }
+
+    // onboarding is completed but user is not logged in -> navigate via AuthWrapper / login
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) {

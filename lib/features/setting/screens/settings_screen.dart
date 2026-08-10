@@ -1,5 +1,6 @@
 import 'package:brainvault/app/theme/app_colors.dart';
 import 'package:brainvault/app/theme/app_text_styles.dart';
+import 'package:brainvault/core/services/auth_services.dart';
 import 'package:brainvault/shared/theme_provider.dart';
 import 'package:flutter/material.dart';
 
@@ -23,19 +24,26 @@ class _SettingsItem {
 }
 
 // ── Main Settings Screen ──────────────────────────────────────────────────────
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  final AuthService _authService = AuthService();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final textSecondary =
-        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final textSecondary = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
     final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
     final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
-    final bg =
-        isDark ? AppColors.darkBackground : AppColors.lightBackground;
+    final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
 
     final List<_SettingsItem> items = [
       _SettingsItem(
@@ -100,22 +108,27 @@ class SettingsScreen extends StatelessWidget {
         ),
         title: Text(
           'Settings',
-          style: AppTextStyles.h3(
-              color: theme.textTheme.titleLarge?.color),
+          style: AppTextStyles.h3(color: theme.textTheme.titleLarge?.color),
         ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [
           // Profile summary card
-          _ProfileCard(surface: surface, border: border, textSecondary: textSecondary),
+          _ProfileCard(
+            surface: surface,
+            border: border,
+            textSecondary: textSecondary,
+          ),
           const SizedBox(height: 20),
 
           // Section label
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: Text('General',
-                style: AppTextStyles.caption(color: textSecondary)),
+            child: Text(
+              'General',
+              style: AppTextStyles.caption(color: textSecondary),
+            ),
           ),
 
           // Settings items
@@ -142,22 +155,29 @@ class SettingsScreen extends StatelessWidget {
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.error,
-                side: BorderSide(
-                    color: AppColors.error.withValues(alpha: 0.4)),
+                side: BorderSide(color: AppColors.error.withValues(alpha: 0.4)),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               icon: const Icon(Icons.logout_rounded),
-              label: Text('Sign Out', style: AppTextStyles.button(color: AppColors.error)),
+              label: Text(
+                'Sign Out',
+                style: AppTextStyles.button(color: AppColors.error),
+              ),
               onPressed: () {
                 showDialog(
                   context: context,
                   builder: (ctx) => AlertDialog(
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
-                    title: Text('Sign Out',
-                        style: AppTextStyles.h3(
-                            color: theme.textTheme.titleLarge?.color)),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    title: Text(
+                      'Sign Out',
+                      style: AppTextStyles.h3(
+                        color: theme.textTheme.titleLarge?.color,
+                      ),
+                    ),
                     content: Text(
                       'Are you sure you want to sign out?',
                       style: AppTextStyles.body(color: textSecondary),
@@ -172,12 +192,23 @@ class SettingsScreen extends StatelessWidget {
                           backgroundColor: AppColors.error,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
-                        onPressed: () {
+                        onPressed: () async {
                           Navigator.pop(ctx);
+                          await _authService.signOut();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Sign out successfull"),
+                            ),
+                          );
                           Navigator.pushNamedAndRemoveUntil(
-                              context, '/login', (_) => false);
+                            // signout
+                            context,
+                            '/login',
+                            (_) => false,
+                          );
                         },
                         child: const Text('Sign Out'),
                       ),
@@ -199,8 +230,11 @@ class _ProfileCard extends StatelessWidget {
   final Color border;
   final Color textSecondary;
 
-  const _ProfileCard(
-      {required this.surface, required this.border, required this.textSecondary});
+  const _ProfileCard({
+    required this.surface,
+    required this.border,
+    required this.textSecondary,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -220,15 +254,19 @@ class _ProfileCard extends StatelessWidget {
               shape: BoxShape.circle,
               color: AppColors.primaryPurple.withValues(alpha: 0.12),
               border: Border.all(
-                  color: AppColors.primaryPurple.withValues(alpha: 0.3),
-                  width: 2),
+                color: AppColors.primaryPurple.withValues(alpha: 0.3),
+                width: 2,
+              ),
             ),
             child: const Center(
-              child: Text('A',
-                  style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryPurple)),
+              child: Text(
+                'A',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryPurple,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 14),
@@ -236,13 +274,17 @@ class _ProfileCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Aman',
-                    style: AppTextStyles.subtitle(
-                        color:
-                            Theme.of(context).textTheme.bodyLarge?.color)),
+                Text(
+                  'Aman',
+                  style: AppTextStyles.subtitle(
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text('aman@brainvault.app',
-                    style: AppTextStyles.caption(color: textSecondary)),
+                Text(
+                  'aman@brainvault.app',
+                  style: AppTextStyles.caption(color: textSecondary),
+                ),
               ],
             ),
           ),
@@ -278,8 +320,7 @@ class _SettingsTile extends StatelessWidget {
         border: Border.all(color: border),
       ),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
         leading: Container(
           width: 38,
           height: 38,
@@ -291,8 +332,9 @@ class _SettingsTile extends StatelessWidget {
         ),
         title: Text(
           item.label,
-          style:
-              AppTextStyles.subtitle(color: theme.textTheme.bodyLarge?.color),
+          style: AppTextStyles.subtitle(
+            color: theme.textTheme.bodyLarge?.color,
+          ),
         ),
         trailing: item.trailingText != null
             ? Row(
@@ -309,9 +351,9 @@ class _SettingsTile extends StatelessWidget {
             : Icon(Icons.chevron_right, color: textSecondary),
         onTap: item.pageBuilder != null
             ? () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: item.pageBuilder!),
-                )
+                context,
+                MaterialPageRoute(builder: item.pageBuilder!),
+              )
             : null,
       ),
     );
@@ -346,8 +388,9 @@ class _AccountScreenState extends State<_AccountScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
-    final textSecondary =
-        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final textSecondary = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
 
     return Scaffold(
       backgroundColor: bg,
@@ -357,9 +400,10 @@ class _AccountScreenState extends State<_AccountScreen> {
           icon: const Icon(Icons.arrow_back_ios_new, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Account',
-            style: AppTextStyles.h3(
-                color: theme.textTheme.titleLarge?.color)),
+        title: Text(
+          'Account',
+          style: AppTextStyles.h3(color: theme.textTheme.titleLarge?.color),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -376,15 +420,19 @@ class _AccountScreenState extends State<_AccountScreen> {
                       shape: BoxShape.circle,
                       color: AppColors.primaryPurple.withValues(alpha: 0.12),
                       border: Border.all(
-                          color: AppColors.primaryPurple.withValues(alpha: 0.4),
-                          width: 2.5),
+                        color: AppColors.primaryPurple.withValues(alpha: 0.4),
+                        width: 2.5,
+                      ),
                     ),
                     child: const Center(
-                      child: Text('A',
-                          style: TextStyle(
-                              fontSize: 34,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primaryPurple)),
+                      child: Text(
+                        'A',
+                        style: TextStyle(
+                          fontSize: 34,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryPurple,
+                        ),
+                      ),
                     ),
                   ),
                   Positioned(
@@ -397,8 +445,11 @@ class _AccountScreenState extends State<_AccountScreen> {
                         color: AppColors.primaryPurple,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.camera_alt_outlined,
-                          color: Colors.white, size: 14),
+                      child: const Icon(
+                        Icons.camera_alt_outlined,
+                        color: Colors.white,
+                        size: 14,
+                      ),
                     ),
                   ),
                 ],
@@ -440,7 +491,8 @@ class _AccountScreenState extends State<_AccountScreen> {
                   backgroundColor: AppColors.primaryPurple,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -448,8 +500,7 @@ class _AccountScreenState extends State<_AccountScreen> {
                   );
                   Navigator.pop(context);
                 },
-                child: Text('Save Changes',
-                    style: AppTextStyles.button()),
+                child: Text('Save Changes', style: AppTextStyles.button()),
               ),
             ),
           ],
@@ -471,7 +522,12 @@ class _AppearanceScreenState extends State<_AppearanceScreen> {
   final _tp = ThemeProvider.instance;
 
   final List<String> _accentOptions = [
-    'Purple', 'Blue', 'Green', 'Orange', 'Red', 'Slate',
+    'Purple',
+    'Blue',
+    'Green',
+    'Orange',
+    'Red',
+    'Slate',
   ];
   final List<Color> _accentColors = [
     AppColors.primaryPurple,
@@ -490,8 +546,9 @@ class _AppearanceScreenState extends State<_AppearanceScreen> {
     final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
     final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-    final textSecondary =
-        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final textSecondary = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
 
     return Scaffold(
       backgroundColor: bg,
@@ -501,9 +558,10 @@ class _AppearanceScreenState extends State<_AppearanceScreen> {
           icon: const Icon(Icons.arrow_back_ios_new, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Appearance',
-            style: AppTextStyles.h3(
-                color: theme.textTheme.titleLarge?.color)),
+        title: Text(
+          'Appearance',
+          style: AppTextStyles.h3(color: theme.textTheme.titleLarge?.color),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -521,12 +579,17 @@ class _AppearanceScreenState extends State<_AppearanceScreen> {
                   color: const Color(0xFF0F0F1A).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.dark_mode_outlined,
-                    color: AppColors.primaryPurple),
+                child: const Icon(
+                  Icons.dark_mode_outlined,
+                  color: AppColors.primaryPurple,
+                ),
               ),
-              title: Text('Dark Mode',
-                  style: AppTextStyles.subtitle(
-                      color: theme.textTheme.bodyLarge?.color)),
+              title: Text(
+                'Dark Mode',
+                style: AppTextStyles.subtitle(
+                  color: theme.textTheme.bodyLarge?.color,
+                ),
+              ),
               subtitle: Text(
                 isDark ? 'On' : 'Off',
                 style: AppTextStyles.caption(color: textSecondary),
@@ -543,7 +606,10 @@ class _AppearanceScreenState extends State<_AppearanceScreen> {
           ),
           const SizedBox(height: 16),
 
-          Text('Theme Mode', style: AppTextStyles.caption(color: textSecondary)),
+          Text(
+            'Theme Mode',
+            style: AppTextStyles.caption(color: textSecondary),
+          ),
           const SizedBox(height: 10),
           _SectionCard(
             surface: surface,
@@ -587,7 +653,10 @@ class _AppearanceScreenState extends State<_AppearanceScreen> {
           ),
           const SizedBox(height: 20),
 
-          Text('Accent Color', style: AppTextStyles.caption(color: textSecondary)),
+          Text(
+            'Accent Color',
+            style: AppTextStyles.caption(color: textSecondary),
+          ),
           const SizedBox(height: 10),
           Wrap(
             spacing: 12,
@@ -604,9 +673,7 @@ class _AppearanceScreenState extends State<_AppearanceScreen> {
                     color: _accentColors[i],
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: selected
-                          ? _accentColors[i]
-                          : Colors.transparent,
+                      color: selected ? _accentColors[i] : Colors.transparent,
                       width: 3,
                     ),
                     boxShadow: selected
@@ -615,13 +682,16 @@ class _AppearanceScreenState extends State<_AppearanceScreen> {
                               color: _accentColors[i].withValues(alpha: 0.4),
                               blurRadius: 10,
                               spreadRadius: 2,
-                            )
+                            ),
                           ]
                         : [],
                   ),
                   child: selected
-                      ? const Icon(Icons.check_rounded,
-                          color: Colors.white, size: 24)
+                      ? const Icon(
+                          Icons.check_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        )
                       : null,
                 ),
               );
@@ -655,8 +725,9 @@ class _NotificationsScreenState extends State<_NotificationsScreen> {
     final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
     final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-    final textSecondary =
-        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final textSecondary = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
 
     return Scaffold(
       backgroundColor: bg,
@@ -666,9 +737,10 @@ class _NotificationsScreenState extends State<_NotificationsScreen> {
           icon: const Icon(Icons.arrow_back_ios_new, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Notifications',
-            style: AppTextStyles.h3(
-                color: theme.textTheme.titleLarge?.color)),
+        title: Text(
+          'Notifications',
+          style: AppTextStyles.h3(color: theme.textTheme.titleLarge?.color),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -706,8 +778,10 @@ class _NotificationsScreenState extends State<_NotificationsScreen> {
             onChanged: (v) => setState(() => _dailySummary = v),
           ),
           const SizedBox(height: 20),
-          Text('Sound & Vibration',
-              style: AppTextStyles.caption(color: textSecondary)),
+          Text(
+            'Sound & Vibration',
+            style: AppTextStyles.caption(color: textSecondary),
+          ),
           const SizedBox(height: 10),
           _SwitchTile(
             label: 'Sound',
@@ -747,8 +821,16 @@ class _LanguageScreen extends StatefulWidget {
 class _LanguageScreenState extends State<_LanguageScreen> {
   String _selected = 'English';
   final List<String> _languages = [
-    'English', 'Hindi', 'Spanish', 'French', 'German',
-    'Arabic', 'Chinese', 'Japanese', 'Korean', 'Portuguese',
+    'English',
+    'Hindi',
+    'Spanish',
+    'French',
+    'German',
+    'Arabic',
+    'Chinese',
+    'Japanese',
+    'Korean',
+    'Portuguese',
   ];
 
   @override
@@ -767,9 +849,10 @@ class _LanguageScreenState extends State<_LanguageScreen> {
           icon: const Icon(Icons.arrow_back_ios_new, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Language',
-            style: AppTextStyles.h3(
-                color: theme.textTheme.titleLarge?.color)),
+        title: Text(
+          'Language',
+          style: AppTextStyles.h3(color: theme.textTheme.titleLarge?.color),
+        ),
       ),
       body: ListView.separated(
         padding: const EdgeInsets.all(20),
@@ -782,8 +865,7 @@ class _LanguageScreenState extends State<_LanguageScreen> {
             borderRadius: BorderRadius.circular(14),
             onTap: () => setState(() => _selected = lang),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.primaryPurple.withValues(alpha: 0.1)
@@ -798,15 +880,21 @@ class _LanguageScreenState extends State<_LanguageScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(lang,
-                        style: AppTextStyles.subtitle(
-                            color: isSelected
-                                ? AppColors.primaryPurple
-                                : theme.textTheme.bodyLarge?.color)),
+                    child: Text(
+                      lang,
+                      style: AppTextStyles.subtitle(
+                        color: isSelected
+                            ? AppColors.primaryPurple
+                            : theme.textTheme.bodyLarge?.color,
+                      ),
+                    ),
                   ),
                   if (isSelected)
-                    const Icon(Icons.check_circle_rounded,
-                        color: AppColors.primaryPurple, size: 20),
+                    const Icon(
+                      Icons.check_circle_rounded,
+                      color: AppColors.primaryPurple,
+                      size: 20,
+                    ),
                 ],
               ),
             ),
@@ -837,8 +925,9 @@ class _PrivacyScreenState extends State<_PrivacyScreen> {
     final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
     final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-    final textSecondary =
-        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final textSecondary = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
 
     return Scaffold(
       backgroundColor: bg,
@@ -848,9 +937,10 @@ class _PrivacyScreenState extends State<_PrivacyScreen> {
           icon: const Icon(Icons.arrow_back_ios_new, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Privacy & Security',
-            style: AppTextStyles.h3(
-                color: theme.textTheme.titleLarge?.color)),
+        title: Text(
+          'Privacy & Security',
+          style: AppTextStyles.h3(color: theme.textTheme.titleLarge?.color),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -929,8 +1019,9 @@ class _DataStorageScreen extends StatelessWidget {
     final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
     final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-    final textSecondary =
-        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final textSecondary = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
 
     return Scaffold(
       backgroundColor: bg,
@@ -940,9 +1031,10 @@ class _DataStorageScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_ios_new, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Data & Storage',
-            style: AppTextStyles.h3(
-                color: theme.textTheme.titleLarge?.color)),
+        title: Text(
+          'Data & Storage',
+          style: AppTextStyles.h3(color: theme.textTheme.titleLarge?.color),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -958,12 +1050,17 @@ class _DataStorageScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Storage Used',
-                    style: AppTextStyles.subtitle(
-                        color: theme.textTheme.bodyLarge?.color)),
+                Text(
+                  'Storage Used',
+                  style: AppTextStyles.subtitle(
+                    color: theme.textTheme.bodyLarge?.color,
+                  ),
+                ),
                 const SizedBox(height: 6),
-                Text('2.4 GB of 10 GB used',
-                    style: AppTextStyles.caption(color: textSecondary)),
+                Text(
+                  '2.4 GB of 10 GB used',
+                  style: AppTextStyles.caption(color: textSecondary),
+                ),
                 const SizedBox(height: 12),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
@@ -971,7 +1068,9 @@ class _DataStorageScreen extends StatelessWidget {
                     value: 0.24,
                     minHeight: 10,
                     backgroundColor: border,
-                    valueColor: const AlwaysStoppedAnimation(AppColors.primaryPurple),
+                    valueColor: const AlwaysStoppedAnimation(
+                      AppColors.primaryPurple,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -995,9 +1094,9 @@ class _DataStorageScreen extends StatelessWidget {
             border: border,
             textSecondary: textSecondary,
             theme: theme,
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Export started…')),
-            ),
+            onTap: () => ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Export started…'))),
           ),
           const SizedBox(height: 10),
           _ActionTile(
@@ -1007,9 +1106,9 @@ class _DataStorageScreen extends StatelessWidget {
             border: border,
             textSecondary: textSecondary,
             theme: theme,
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Cache cleared!')),
-            ),
+            onTap: () => ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Cache cleared!'))),
           ),
           const SizedBox(height: 10),
           _ActionTile(
@@ -1040,8 +1139,9 @@ class _AboutScreen extends StatelessWidget {
     final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
     final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-    final textSecondary =
-        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final textSecondary = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
 
     return Scaffold(
       backgroundColor: bg,
@@ -1051,9 +1151,10 @@ class _AboutScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_ios_new, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('About',
-            style: AppTextStyles.h3(
-                color: theme.textTheme.titleLarge?.color)),
+        title: Text(
+          'About',
+          style: AppTextStyles.h3(color: theme.textTheme.titleLarge?.color),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -1073,19 +1174,25 @@ class _AboutScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(Icons.psychology_rounded,
-                  color: Colors.white, size: 44),
+              child: const Icon(
+                Icons.psychology_rounded,
+                color: Colors.white,
+                size: 44,
+              ),
             ),
           ),
           const SizedBox(height: 16),
           Center(
-            child: Text('BrainVault',
-                style: AppTextStyles.h2(
-                    color: theme.textTheme.titleLarge?.color)),
+            child: Text(
+              'BrainVault',
+              style: AppTextStyles.h2(color: theme.textTheme.titleLarge?.color),
+            ),
           ),
           Center(
-            child: Text('Version 1.0.0',
-                style: AppTextStyles.caption(color: textSecondary)),
+            child: Text(
+              'Version 1.0.0',
+              style: AppTextStyles.caption(color: textSecondary),
+            ),
           ),
           const SizedBox(height: 28),
           ...[
@@ -1135,8 +1242,11 @@ class _SectionCard extends StatelessWidget {
   final Color border;
   final Widget child;
 
-  const _SectionCard(
-      {required this.surface, required this.border, required this.child});
+  const _SectionCard({
+    required this.surface,
+    required this.border,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1175,23 +1285,29 @@ class _ThemeModeOption extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
-            Icon(icon,
-                color: selected
-                    ? AppColors.primaryPurple
-                    : Theme.of(context).iconTheme.color),
+            Icon(
+              icon,
+              color: selected
+                  ? AppColors.primaryPurple
+                  : Theme.of(context).iconTheme.color,
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Text(
                 label,
                 style: AppTextStyles.subtitle(
-                    color: selected
-                        ? AppColors.primaryPurple
-                        : Theme.of(context).textTheme.bodyLarge?.color),
+                  color: selected
+                      ? AppColors.primaryPurple
+                      : Theme.of(context).textTheme.bodyLarge?.color,
+                ),
               ),
             ),
             if (selected)
-              const Icon(Icons.check_circle_rounded,
-                  color: AppColors.primaryPurple, size: 20),
+              const Icon(
+                Icons.check_circle_rounded,
+                color: AppColors.primaryPurple,
+                size: 20,
+              ),
           ],
         ),
       ),
@@ -1231,11 +1347,16 @@ class _SwitchTile extends StatelessWidget {
       ),
       child: ListTile(
         contentPadding: EdgeInsets.zero,
-        title: Text(label,
-            style: AppTextStyles.subtitle(
-                color: theme.textTheme.bodyLarge?.color)),
-        subtitle: Text(subtitle,
-            style: AppTextStyles.caption(color: textSecondary)),
+        title: Text(
+          label,
+          style: AppTextStyles.subtitle(
+            color: theme.textTheme.bodyLarge?.color,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: AppTextStyles.caption(color: textSecondary),
+        ),
         trailing: Switch(
           value: value,
           activeThumbColor: AppColors.primaryPurple,
@@ -1276,14 +1397,14 @@ class _ActionTile extends StatelessWidget {
         border: Border.all(color: border),
       ),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
         title: Text(
           label,
           style: AppTextStyles.subtitle(
-              color: destructive
-                  ? AppColors.error
-                  : theme.textTheme.bodyLarge?.color),
+            color: destructive
+                ? AppColors.error
+                : theme.textTheme.bodyLarge?.color,
+          ),
         ),
         trailing: Icon(
           icon,
