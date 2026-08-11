@@ -1,239 +1,346 @@
 import 'dart:convert';
-import 'package:brainvault/firebase_options.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:firebase_ai/firebase_ai.dart';
 
 class GeminiService {
   static final GeminiService instance = GeminiService._internal();
+
   GeminiService._internal();
 
-  static const String _prefApiKey = 'gemini_api_key';
-  String? _customApiKey;
+  // Gemini model through Firebase AI Logic
+  late final GenerativeModel _model;
 
-  /// Default API key configured via build environment or constant
-  static String defaultApiKey = const String.fromEnvironment('GEMINI_API_KEY');
+  // Prevent initializing the model multiple times
+  bool _initialized = false;
 
-  /// Get currently stored API key or fallback to default
-  Future<String?> getApiKey() async {
-    if (_customApiKey != null && _customApiKey!.isNotEmpty) {
-      return _customApiKey;
-    }
-    final prefs = await SharedPreferences.getInstance();
-    final key = prefs.getString(_prefApiKey);
-    if (key != null && key.isNotEmpty) {
-      _customApiKey = key;
-      return key;
-    }
-    if (defaultApiKey.isNotEmpty) {
-      return defaultApiKey;
-    }
-    return DefaultFirebaseOptions.currentPlatform.apiKey;
+  /// Initialize Firebase AI Logic Gemini model.
+  ///
+  /// IMPORTANT:
+  /// Firebase.initializeApp() must already have been called
+  /// before this method is called.
+  Future<void> initialize() async {
+    if (_initialized) return;
+
+    final ai = FirebaseAI.googleAI();
+
+    _model = ai.generativeModel(model: 'gemini-3.6-flash');
+
+    _initialized = true;
   }
 
-  /// Save API Key to local storage (for admin / developer settings if needed)
-  Future<void> setApiKey(String apiKey) async {
-    _customApiKey = apiKey.trim();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefApiKey, _customApiKey!);
-  }
-
-  /// Helper to get GenerativeModel instance
-  Future<GenerativeModel?> _getModel({
-    String modelName = 'gemini-1.5-flash',
-    GenerationConfig? config,
-  }) async {
-    final apiKey = await getApiKey();
-    if (apiKey == null || apiKey.isEmpty) {
-      return null;
+  /// Make sure Gemini is initialized before making a request.
+  Future<void> _ensureInitialized() async {
+    if (!_initialized) {
+      await initialize();
     }
-    return GenerativeModel(
-      model: modelName,
-      apiKey: apiKey,
-      generationConfig: config,
-    );
   }
 
-  /// Ask a general question to Gemini
+  // ---------------------------------------------------------------------------
+  // GENERAL AI CHAT
+  // ---------------------------------------------------------------------------
+
+  /// Ask a general question to Brain AI.
   Future<String> askQuestion(String prompt) async {
     try {
-      final model = await _getModel(modelName: 'gemini-1.5-flash');
-      if (model != null) {
-        final systemPrompt =
-            'You are Brain AI, an intelligent personal AI assistant in the BrainVault application. '
-            'Provide clear, well-structured, insightful answers with bold headings, clean bullet points, or concise paragraphs.';
+      await _ensureInitialized();
 
-        final content = [
-          Content.text('$systemPrompt\n\nUser Question: $prompt'),
-        ];
+      const systemPrompt = '''
+You are Brain AI, an intelligent personal AI assistant
+inside the BrainVault application.
 
-        final response = await model.generateContent(content);
-        final text = response.text;
-        if (text != null && text.trim().isNotEmpty) {
-          return text.trim();
-        }
+Your job is to help users understand, organize, and learn information.
+
+Provide:
+- Clear explanations
+- Useful structure
+- Short headings when appropriate
+- Bullet points when helpful
+- Examples when useful
+- Concise answers when the question is simple
+
+Do not unnecessarily repeat the user's question.
+''';
+
+      final content = [
+        Content.text('$systemPrompt\n\nUser Question:\n$prompt'),
+      ];
+
+      final response = await _model.generateContent(content);
+
+      final text = response.text;
+
+      if (text != null && text.trim().isNotEmpty) {
+        return text.trim();
       }
-    } catch (_) {
-      // Fallback seamlessly if Gemini API key is blocked or offline
-    }
 
-    return _generateFallbackAnswer(prompt);
+      return 'I could not generate a response. Please try again.';
+    } catch (e) {
+      return 'Gemini request failed: $e';
+    }
   }
 
-  /// Generate structured Note content using Gemini
+  // ---------------------------------------------------------------------------
+  // NOTES
+  // ---------------------------------------------------------------------------
+
+  /// Generate structured Note content.
   Future<Map<String, dynamic>> generateNoteContent(String prompt) async {
     try {
-      final model = await _getModel(
-        modelName: 'gemini-1.5-flash',
-        config: GenerationConfig(responseMimeType: 'application/json'),
+      await _ensureInitialized();
+
+      const systemInstruction = '''
+Create a structured study note from the user's input.
+
+Return ONLY valid JSON.
+
+The JSON must follow exactly this structure:
+
+{
+  "title": "Short title of note",
+  "content": "Detailed explanation of the topic.",
+  "bullets": [
+    "Key point 1",
+    "Key point 2",
+    "Key point 3"
+  ]
+}
+
+Rules:
+- title must be short and descriptive
+- content should explain the topic clearly
+- bullets should contain the most important points
+- do not return Markdown
+- do not wrap the JSON in ```json
+''';
+
+      final response = await _model.generateContent(
+        [Content.text('$systemInstruction\n\nUser Input:\n$prompt')],
+        generationConfig: GenerationConfig(
+          responseMimeType: 'application/json',
+        ),
       );
 
-      if (model != null) {
-        final systemInstruction =
-            'Create a structured Note item for the prompt. Return ONLY a valid JSON object matching this schema:\n'
-            '{\n'
-            '  "title": "Short title of note",\n'
-            '  "content": "Detailed overview and comprehensive note text.",\n'
-            '  "bullets": ["Key bullet point 1", "Key bullet point 2", "Key bullet point 3"]\n'
-            '}\n';
+      final text = response.text ?? '';
 
-        final content = [Content.text('$systemInstruction\n\nPrompt: $prompt')];
-        final response = await model.generateContent(content);
-        final text = response.text ?? '';
-        if (text.isNotEmpty) {
-          return _parseJsonSafely(text, fallbackTitle: 'AI Note');
-        }
+      if (text.trim().isNotEmpty) {
+        return _parseJsonSafely(text, fallbackTitle: 'AI Note');
       }
-    } catch (_) {
-      // Fallback seamlessly
+    } catch (e) {
+      // Return fallback rather than crashing the UI.
     }
 
     return _generateFallbackNote(prompt);
   }
 
-  /// Generate structured Mind Map JSON using Gemini
+  // ---------------------------------------------------------------------------
+  // MIND MAP
+  // ---------------------------------------------------------------------------
+
+  /// Generate structured Mind Map JSON.
   Future<Map<String, dynamic>> generateMindMapContent(String prompt) async {
     try {
-      final model = await _getModel(
-        modelName: 'gemini-1.5-flash',
-        config: GenerationConfig(responseMimeType: 'application/json'),
+      await _ensureInitialized();
+
+      const systemInstruction = '''
+Create a hierarchical mind map from the user's input.
+
+Return ONLY valid JSON.
+
+The JSON must follow exactly this structure:
+
+{
+  "title": "Short mind map title",
+  "centralTopic": "Central topic",
+  "branches": [
+    {
+      "label": "Branch name",
+      "children": [
+        "Sub-topic 1",
+        "Sub-topic 2",
+        "Sub-topic 3"
+      ]
+    }
+  ]
+}
+
+Rules:
+- Create 3 to 5 main branches.
+- Each branch should contain 2 to 5 children.
+- Keep labels short.
+- Organize information logically.
+- Do not return Markdown.
+- Do not wrap the JSON in ```json.
+''';
+
+      final response = await _model.generateContent(
+        [Content.text('$systemInstruction\n\nUser Input:\n$prompt')],
+        generationConfig: GenerationConfig(
+          responseMimeType: 'application/json',
+        ),
       );
 
-      if (model != null) {
-        final systemInstruction =
-            'Generate a hierarchical Mind Map for the prompt. Return ONLY a valid JSON object matching this schema:\n'
-            '{\n'
-            '  "title": "Short mind map title",\n'
-            '  "centralTopic": "Central core topic",\n'
-            '  "branches": [\n'
-            '    {\n'
-            '      "label": "Branch Category Name",\n'
-            '      "children": ["Sub-topic 1", "Sub-topic 2", "Sub-topic 3"]\n'
-            '    }\n'
-            '  ]\n'
-            '}\n'
-            'Provide 3 to 4 distinct branches with 2 to 4 children each.';
+      final text = response.text ?? '';
 
-        final content = [Content.text('$systemInstruction\n\nPrompt: $prompt')];
-        final response = await model.generateContent(content);
-        final text = response.text ?? '';
-        if (text.isNotEmpty) {
-          return _parseJsonSafely(text, fallbackTitle: 'AI Mind Map');
-        }
+      if (text.trim().isNotEmpty) {
+        return _parseJsonSafely(text, fallbackTitle: 'AI Mind Map');
       }
-    } catch (_) {
-      // Fallback seamlessly
+    } catch (e) {
+      // Return fallback rather than crashing the UI.
     }
 
     return _generateFallbackMindMap(prompt);
   }
 
-  /// Generate structured Summary content using Gemini
+  // ---------------------------------------------------------------------------
+  // SUMMARY
+  // ---------------------------------------------------------------------------
+
+  /// Generate structured Summary JSON.
   Future<Map<String, dynamic>> generateSummaryContent(String prompt) async {
     try {
-      final model = await _getModel(
-        modelName: 'gemini-1.5-flash',
-        config: GenerationConfig(responseMimeType: 'application/json'),
+      await _ensureInitialized();
+
+      const systemInstruction = '''
+Create an executive summary from the user's input.
+
+Return ONLY valid JSON.
+
+The JSON must follow exactly this structure:
+
+{
+  "title": "Short summary title",
+  "overview": "Clear overview of the main ideas.",
+  "bullets": [
+    "Main takeaway 1",
+    "Main takeaway 2",
+    "Main takeaway 3"
+  ]
+}
+
+Rules:
+- overview should explain the main idea clearly
+- bullets should contain the most important takeaways
+- avoid unnecessary repetition
+- do not return Markdown
+- do not wrap the JSON in ```json
+''';
+
+      final response = await _model.generateContent(
+        [Content.text('$systemInstruction\n\nUser Input:\n$prompt')],
+        generationConfig: GenerationConfig(
+          responseMimeType: 'application/json',
+        ),
       );
 
-      if (model != null) {
-        final systemInstruction =
-            'Generate an executive summary based on the given prompt or URL topic. Return ONLY a valid JSON object matching this schema:\n'
-            '{\n'
-            '  "title": "Short summary title",\n'
-            '  "overview": "Clear executive overview summarizing key ideas.",\n'
-            '  "bullets": ["Main takeaway 1", "Main takeaway 2", "Strategic insight 3"]\n'
-            '}\n';
+      final text = response.text ?? '';
 
-        final content = [Content.text('$systemInstruction\n\nPrompt: $prompt')];
-        final response = await model.generateContent(content);
-        final text = response.text ?? '';
-        if (text.isNotEmpty) {
-          return _parseJsonSafely(text, fallbackTitle: 'AI Executive Summary');
-        }
+      if (text.trim().isNotEmpty) {
+        return _parseJsonSafely(text, fallbackTitle: 'AI Executive Summary');
       }
-    } catch (_) {
-      // Fallback seamlessly
+    } catch (e) {
+      // Return fallback rather than crashing the UI.
     }
 
     return _generateFallbackSummary(prompt);
   }
 
-  Map<String, dynamic> _parseJsonSafely(String text, {required String fallbackTitle}) {
+  // ---------------------------------------------------------------------------
+  // JSON PARSER
+  // ---------------------------------------------------------------------------
+
+  Map<String, dynamic> _parseJsonSafely(
+    String text, {
+    required String fallbackTitle,
+  }) {
     try {
       String cleaned = text.trim();
+
+      // Remove Markdown code fences if Gemini returns them anyway.
       if (cleaned.startsWith('```json')) {
         cleaned = cleaned.substring(7);
       } else if (cleaned.startsWith('```')) {
         cleaned = cleaned.substring(3);
       }
+
       if (cleaned.endsWith('```')) {
         cleaned = cleaned.substring(0, cleaned.length - 3);
       }
+
       cleaned = cleaned.trim();
 
-      final data = json.decode(cleaned) as Map<String, dynamic>;
-      return data;
+      final decoded = json.decode(cleaned);
+
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+
+      return {'title': fallbackTitle, 'content': cleaned};
     } catch (_) {
       return {
         'title': fallbackTitle,
         'content': text,
         'overview': text,
         'centralTopic': fallbackTitle,
-        'bullets': ['Extracted key concept from response'],
+        'bullets': ['Extracted key concept from AI response'],
         'branches': [
           {
             'label': 'Main Ideas',
-            'children': ['Overview', 'Insights', 'Action Items']
-          }
-        ]
+            'children': ['Overview', 'Insights', 'Key Points'],
+          },
+        ],
       };
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // FALLBACK ANSWER
+  // ---------------------------------------------------------------------------
+
   String _generateFallbackAnswer(String prompt) {
     final cleanPrompt = prompt.trim();
-    return 'Here is what I found regarding **"$cleanPrompt"**:\n\n'
-        '• **Core Concept**: Brain AI analyzed your input to structure key information.\n'
-        '• **Key Insight**: Effective knowledge organization enhances learning and retention.\n'
-        '• **Actionable Advice**: You can select Notes, Mind Map, or Executive Summary above to organize this into your vault.';
+
+    return '''
+Here is what I found regarding **"$cleanPrompt"**:
+
+• **Core Concept:** Brain AI analyzed your input to structure the information.
+
+• **Key Insight:** Organizing information into notes, summaries, and mind maps can make learning easier.
+
+• **Next Step:** Select Notes, Mind Map, or Summary to organize the information in BrainVault.
+''';
   }
+
+  // ---------------------------------------------------------------------------
+  // FALLBACK NOTE
+  // ---------------------------------------------------------------------------
 
   Map<String, dynamic> _generateFallbackNote(String prompt) {
     final cleanPrompt = prompt.trim();
+
     return {
-      'title': cleanPrompt.length > 25 ? '${cleanPrompt.substring(0, 25)}...' : cleanPrompt,
-      'content': 'Comprehensive notes on "$cleanPrompt". Organized by Brain AI for quick reference and study.',
+      'title': cleanPrompt.length > 25
+          ? '${cleanPrompt.substring(0, 25)}...'
+          : cleanPrompt,
+      'content': 'Comprehensive notes on "$cleanPrompt".',
       'bullets': [
-        'Key takeaway on $cleanPrompt',
-        'Important definition and applications',
-        'Next steps and recommended actions'
+        'Key takeaway about $cleanPrompt',
+        'Important concepts and definitions',
+        'Applications and examples',
       ],
     };
   }
 
+  // ---------------------------------------------------------------------------
+  // FALLBACK MIND MAP
+  // ---------------------------------------------------------------------------
+
   Map<String, dynamic> _generateFallbackMindMap(String prompt) {
     final cleanPrompt = prompt.trim();
-    final title = cleanPrompt.length > 20 ? '${cleanPrompt.substring(0, 20)}...' : cleanPrompt;
+
+    final title = cleanPrompt.length > 20
+        ? '${cleanPrompt.substring(0, 20)}...'
+        : cleanPrompt;
+
     return {
       'title': title,
       'centralTopic': title,
@@ -244,27 +351,38 @@ class GeminiService {
         },
         {
           'label': 'Key Features',
-          'children': ['Primary Component', 'Secondary Component', 'Best Practices'],
+          'children': [
+            'Primary Component',
+            'Secondary Component',
+            'Best Practices',
+          ],
         },
         {
-          'label': 'Action Items',
-          'children': ['Implementation', 'Review & Refine', 'Future Goals'],
+          'label': 'Applications',
+          'children': ['Implementation', 'Examples', 'Use Cases'],
         },
       ],
     };
   }
 
+  // ---------------------------------------------------------------------------
+  // FALLBACK SUMMARY
+  // ---------------------------------------------------------------------------
+
   Map<String, dynamic> _generateFallbackSummary(String prompt) {
     final cleanPrompt = prompt.trim();
+
     return {
-      'title': cleanPrompt.length > 25 ? '${cleanPrompt.substring(0, 25)}...' : cleanPrompt,
-      'overview': 'Executive summary synthesizing key highlights and insights for "$cleanPrompt".',
+      'title': cleanPrompt.length > 25
+          ? '${cleanPrompt.substring(0, 25)}...'
+          : cleanPrompt,
+      'overview':
+          'Executive summary of the main ideas related to "$cleanPrompt".',
       'bullets': [
-        'Primary strategic objective identified',
-        'Main points and structure summarized',
-        'Actionable conclusions for your workspace'
+        'Primary concept identified',
+        'Main points summarized',
+        'Important conclusions highlighted',
       ],
     };
   }
 }
-

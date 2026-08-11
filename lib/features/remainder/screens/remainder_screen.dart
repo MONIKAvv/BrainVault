@@ -1,9 +1,11 @@
 import 'package:brainvault/app/theme/app_colors.dart';
 import 'package:brainvault/app/theme/app_text_styles.dart';
+import 'package:brainvault/core/services/firestore_service.dart';
 import 'package:flutter/material.dart';
 
 // ── Model ─────────────────────────────────────────────────────────────────────
 class _Reminder {
+  String id;
   String title;
   String schedule;
   bool enabled;
@@ -11,12 +13,39 @@ class _Reminder {
   String repeat;
 
   _Reminder({
+    required this.id,
     required this.title,
     required this.schedule,
     required this.enabled,
     required this.time,
     this.repeat = 'Daily',
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'schedule': schedule,
+      'enabled': enabled,
+      'hour': time.hour,
+      'minute': time.minute,
+      'repeat': repeat,
+    };
+  }
+
+  factory _Reminder.fromMap(Map<String, dynamic> map) {
+    return _Reminder(
+      id: map['id'] ?? '',
+      title: map['title'] ?? 'Untitled Reminder',
+      schedule: map['schedule'] ?? 'Daily',
+      enabled: map['enabled'] as bool? ?? true,
+      time: TimeOfDay(
+        hour: map['hour'] is int ? map['hour'] : 8,
+        minute: map['minute'] is int ? map['minute'] : 0,
+      ),
+      repeat: map['repeat'] ?? 'Daily',
+    );
+  }
 }
 
 // ── Screen ────────────────────────────────────────────────────────────────────
@@ -28,38 +57,24 @@ class RemainderScreen extends StatefulWidget {
 }
 
 class _RemainderScreenState extends State<RemainderScreen> {
-  final List<_Reminder> _reminders = [
-    _Reminder(
-      title: 'Drink Water',
-      schedule: 'Daily · 8:00 AM',
-      enabled: true,
-      time: const TimeOfDay(hour: 8, minute: 0),
-    ),
-    _Reminder(
-      title: 'Take Break',
-      schedule: 'Daily · 1:00 PM',
-      enabled: true,
-      time: const TimeOfDay(hour: 13, minute: 0),
-    ),
-    _Reminder(
-      title: 'Night Walk',
-      schedule: 'Daily · 7:00 PM',
-      enabled: false,
-      time: const TimeOfDay(hour: 19, minute: 0),
-    ),
-    _Reminder(
-      title: 'Read Book',
-      schedule: 'Daily · 9:30 PM',
-      enabled: true,
-      time: const TimeOfDay(hour: 21, minute: 30),
-    ),
-    _Reminder(
-      title: 'Morning Walk',
-      schedule: 'Daily · 6:00 AM',
-      enabled: true,
-      time: const TimeOfDay(hour: 6, minute: 0),
-    ),
-  ];
+  final FirestoreService _firestoreService = FirestoreService.instance;
+  final List<_Reminder> _reminders = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToFirestoreReminders();
+  }
+
+  void _listenToFirestoreReminders() {
+    _firestoreService.streamReminders().listen((reminderMaps) {
+      if (!mounted) return;
+      setState(() {
+        _reminders.clear();
+        _reminders.addAll(reminderMaps.map((m) => _Reminder.fromMap(m)));
+      });
+    }, onError: (_) {});
+  }
 
   // Sort: enabled first, then by time
   List<_Reminder> get _sorted {
@@ -73,10 +88,10 @@ class _RemainderScreenState extends State<RemainderScreen> {
     return list;
   }
 
-  void _showAddReminderDialog() {
-    final titleCtrl = TextEditingController();
-    String repeat = 'Daily';
-    TimeOfDay selectedTime = TimeOfDay.now();
+  void _showAddOrEditReminderDialog([_Reminder? existingReminder]) {
+    final titleCtrl = TextEditingController(text: existingReminder?.title ?? '');
+    String repeat = existingReminder?.repeat ?? 'Daily';
+    TimeOfDay selectedTime = existingReminder?.time ?? TimeOfDay.now();
 
     showModalBottomSheet(
       context: context,
@@ -110,7 +125,6 @@ class _RemainderScreenState extends State<RemainderScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Handle bar
                   Center(
                     child: Container(
                       width: 40,
@@ -122,8 +136,10 @@ class _RemainderScreenState extends State<RemainderScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Text('New Reminder',
-                      style: AppTextStyles.h3(color: textPrimary)),
+                  Text(
+                    existingReminder == null ? 'New Reminder' : 'Edit Reminder',
+                    style: AppTextStyles.h3(color: textPrimary),
+                  ),
                   const SizedBox(height: 20),
 
                   // Title field
@@ -227,15 +243,21 @@ class _RemainderScreenState extends State<RemainderScreen> {
                         final m = selectedTime.minute
                             .toString()
                             .padLeft(2, '0');
-                        setState(() {
-                          _reminders.add(_Reminder(
-                            title: titleCtrl.text.trim(),
-                            schedule: '$repeat · $h:$m $ampm',
-                            enabled: true,
-                            time: selectedTime,
-                            repeat: repeat,
-                          ));
-                        });
+
+                        final id = existingReminder?.id ??
+                            DateTime.now().millisecondsSinceEpoch.toString();
+                        final scheduleStr = '$repeat · $h:$m $ampm';
+
+                        final reminder = _Reminder(
+                          id: id,
+                          title: titleCtrl.text.trim(),
+                          schedule: scheduleStr,
+                          enabled: existingReminder?.enabled ?? true,
+                          time: selectedTime,
+                          repeat: repeat,
+                        );
+
+                        _firestoreService.saveReminder(reminder.toMap());
                         Navigator.pop(ctx);
                       },
                       child: Text('Save Reminder',
@@ -252,15 +274,11 @@ class _RemainderScreenState extends State<RemainderScreen> {
   }
 
   void _deleteReminder(_Reminder r) {
-    setState(() => _reminders.remove(r));
+    _firestoreService.deleteReminder(r.id);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Reminder "${r.title}" deleted'),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () => setState(() => _reminders.add(r)),
-        ),
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -294,11 +312,10 @@ class _RemainderScreenState extends State<RemainderScreen> {
             padding: const EdgeInsets.only(right: 8),
             child: TextButton(
               onPressed: () {
-                setState(() {
-                  for (final r in _reminders) {
-                    r.enabled = true;
-                  }
-                });
+                for (final r in _reminders) {
+                  r.enabled = true;
+                  _firestoreService.saveReminder(r.toMap());
+                }
               },
               child: Text(
                 'Enable All',
@@ -310,7 +327,7 @@ class _RemainderScreenState extends State<RemainderScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddReminderDialog,
+        onPressed: () => _showAddOrEditReminderDialog(),
         shape: const CircleBorder(),
         child: const Icon(Icons.add),
       ),
@@ -336,10 +353,16 @@ class _RemainderScreenState extends State<RemainderScreen> {
               separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final reminder = sorted[index];
-                return _ReminderCard(
-                  reminder: reminder,
-                  onToggle: (val) => setState(() => reminder.enabled = val),
-                  onDelete: () => _deleteReminder(reminder),
+                return GestureDetector(
+                  onTap: () => _showAddOrEditReminderDialog(reminder),
+                  child: _ReminderCard(
+                    reminder: reminder,
+                    onToggle: (val) {
+                      reminder.enabled = val;
+                      _firestoreService.saveReminder(reminder.toMap());
+                    },
+                    onDelete: () => _deleteReminder(reminder),
+                  ),
                 );
               },
             ),
@@ -369,7 +392,7 @@ class _ReminderCard extends StatelessWidget {
         isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
 
     return Dismissible(
-      key: ValueKey(reminder.title + reminder.schedule),
+      key: ValueKey(reminder.id),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
@@ -395,7 +418,6 @@ class _ReminderCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
-              // Alarm icon
               Container(
                 width: 42,
                 height: 42,

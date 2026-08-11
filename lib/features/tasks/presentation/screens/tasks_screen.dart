@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/services/firestore_service.dart';
 
 /// Screen #11: Tasks Screen ("My Tasks")
 class TasksScreen extends StatefulWidget {
@@ -13,16 +14,19 @@ class TasksScreen extends StatefulWidget {
 class _TasksScreenState extends State<TasksScreen> {
   int _selectedFilterIndex = 0;
   final List<String> _filters = ['All', 'Today', 'Upcoming', 'Done'];
+  final FirestoreService _firestoreService = FirestoreService.instance;
 
   final Map<String, List<Map<String, dynamic>>> _tasks = {
     'Today': [
       {
+        'id': 'task_1',
         'title': 'Math Assignment',
         'time': '11:00 AM',
         'color': const Color(0xFFF97316),
         'completed': false,
       },
       {
+        'id': 'task_2',
         'title': 'Complete UI Design',
         'time': '2:00 PM',
         'color': const Color(0xFF7C3AED),
@@ -31,12 +35,14 @@ class _TasksScreenState extends State<TasksScreen> {
     ],
     'Tomorrow': [
       {
+        'id': 'task_3',
         'title': 'Workout',
         'time': '7:00 AM',
         'color': const Color(0xFF10B981),
         'completed': false,
       },
       {
+        'id': 'task_4',
         'title': 'Read Book',
         'time': '2:00 PM',
         'color': const Color(0xFF3B82F6),
@@ -45,6 +51,7 @@ class _TasksScreenState extends State<TasksScreen> {
     ],
     'This Week': [
       {
+        'id': 'task_5',
         'title': 'Project Presentation',
         'time': '14 May, 10:00 AM',
         'color': const Color(0xFFEF4444),
@@ -52,6 +59,33 @@ class _TasksScreenState extends State<TasksScreen> {
       },
     ],
   };
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToFirestoreTasks();
+  }
+
+  void _listenToFirestoreTasks() {
+    _firestoreService.streamTasks().listen((taskList) {
+      if (taskList.isEmpty || !mounted) return;
+
+      final List<Map<String, dynamic>> parsedToday = [];
+      for (final item in taskList) {
+        parsedToday.add({
+          'id': item['id'] ?? '',
+          'title': item['title'] ?? 'Untitled Task',
+          'time': item['time'] ?? 'Just now',
+          'color': Color(item['colorInt'] is int ? item['colorInt'] : 0xFF7C3AED),
+          'completed': item['completed'] ?? false,
+        });
+      }
+
+      setState(() {
+        _tasks['Today'] = parsedToday;
+      });
+    }, onError: (_) {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -119,7 +153,7 @@ class _TasksScreenState extends State<TasksScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _showAddTaskDialog();
+          _showAddOrEditTaskDialog();
         },
         backgroundColor: AppColors.primaryViolet,
         elevation: 4,
@@ -190,27 +224,36 @@ class _TasksScreenState extends State<TasksScreen> {
   Widget _buildTaskTile(Map<String, dynamic> task) {
     final Color accentColor = task['color'] as Color;
     final bool completed = task['completed'] as bool;
+    final String taskId = task['id'] as String? ?? '';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10.0),
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            task['completed'] = !task['completed'];
-          });
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.borderLight),
-          ),
-          child: Row(
-            children: [
-              // Custom Colored Rounded Checkbox Box
-              Container(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: Row(
+          children: [
+            // Custom Checkbox
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  task['completed'] = !task['completed'];
+                });
+                if (taskId.isNotEmpty) {
+                  _firestoreService.saveTask({
+                    'id': taskId,
+                    'title': task['title'],
+                    'time': task['time'],
+                    'colorInt': accentColor.toARGB32(),
+                    'completed': task['completed'],
+                  });
+                }
+              },
+              child: Container(
                 width: 22,
                 height: 22,
                 decoration: BoxDecoration(
@@ -226,8 +269,11 @@ class _TasksScreenState extends State<TasksScreen> {
                         size: 14, color: Colors.white)
                     : null,
               ),
-              const SizedBox(width: 14),
-              Expanded(
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _showAddOrEditTaskDialog(task),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -255,25 +301,32 @@ class _TasksScreenState extends State<TasksScreen> {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textDarkSecondary,
-                size: 22,
-              ),
-            ],
-          ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textDarkSecondary),
+              onPressed: () => _showAddOrEditTaskDialog(task),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
+              onPressed: () {
+                if (taskId.isNotEmpty) {
+                  _firestoreService.deleteTask(taskId);
+                }
+              },
+            ),
+          ],
         ),
       ),
     );
   }
 
-  void _showAddTaskDialog() {
-    final controller = TextEditingController();
+  void _showAddOrEditTaskDialog([Map<String, dynamic>? existingTask]) {
+    final controller = TextEditingController(text: existingTask?['title'] as String? ?? '');
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Add New Task'),
+        title: Text(existingTask == null ? 'Add New Task' : 'Edit Task'),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
@@ -281,6 +334,17 @@ class _TasksScreenState extends State<TasksScreen> {
           ),
         ),
         actions: [
+          if (existingTask != null)
+            TextButton(
+              onPressed: () {
+                final taskId = existingTask['id'] as String? ?? '';
+                if (taskId.isNotEmpty) {
+                  _firestoreService.deleteTask(taskId);
+                }
+                Navigator.pop(context);
+              },
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
@@ -290,19 +354,22 @@ class _TasksScreenState extends State<TasksScreen> {
               backgroundColor: AppColors.primaryViolet,
             ),
             onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                setState(() {
-                  _tasks['Today']!.add({
-                    'title': controller.text.trim(),
-                    'time': 'Just now',
-                    'color': AppColors.primaryViolet,
-                    'completed': false,
-                  });
-                });
+              final titleText = controller.text.trim();
+              if (titleText.isNotEmpty) {
+                final taskId = existingTask?['id'] as String? ??
+                    DateTime.now().millisecondsSinceEpoch.toString();
+                final taskData = {
+                  'id': taskId,
+                  'title': titleText,
+                  'time': existingTask?['time'] ?? 'Just now',
+                  'colorInt': (existingTask?['color'] as Color? ?? AppColors.primaryViolet).toARGB32(),
+                  'completed': existingTask?['completed'] ?? false,
+                };
+                _firestoreService.saveTask(taskData);
               }
               Navigator.pop(context);
             },
-            child: const Text('Add', style: TextStyle(color: Colors.white)),
+            child: Text(existingTask == null ? 'Add' : 'Save', style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),

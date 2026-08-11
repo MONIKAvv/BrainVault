@@ -4,6 +4,7 @@ import 'package:brainvault/features/voice_notes/screens/voice_notes_screen.dart'
 import 'package:brainvault/features/remainder/screens/remainder_screen.dart';
 import 'package:brainvault/features/search/screens/search_screen.dart';
 import 'package:flutter/material.dart';
+import '../core/repositories/vault_repository.dart';
 import '../features/ai_assistant/presentation/screens/ai_assistant_screen.dart';
 import '../features/auth/presentation/screens/login_screen.dart';
 import '../features/auth/presentation/screens/register_screen.dart';
@@ -54,7 +55,6 @@ class AppRouter {
     register: (context) => const RegisterScreen(),
     home: (context) => const HomeScreen(),
     notesList: (context) => const NotesListScreen(),
-    noteEditor: (context) => const NoteEditorScreen(),
     aiAssistant: (context) => const AiAssistantScreen(),
     tasks: (context) => const TasksScreen(),
     calendar: (context) => const CalendarScreen(),
@@ -85,7 +85,10 @@ class AppRouter {
       case notesList:
         return MaterialPageRoute(builder: (_) => const NotesListScreen());
       case noteEditor:
-        return MaterialPageRoute(builder: (_) => const NoteEditorScreen());
+        final note = settings.arguments as NoteItem?;
+        return MaterialPageRoute(
+          builder: (_) => NoteEditorScreen(note: note),
+        );
       case aiAssistant:
         return MaterialPageRoute(builder: (_) => const AiAssistantScreen());
       case tasks:

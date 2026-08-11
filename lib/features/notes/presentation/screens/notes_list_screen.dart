@@ -79,26 +79,60 @@ class _NotesListScreenState extends State<NotesListScreen> {
 
               // Notes List
               Expanded(
-                child: ListView.builder(
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: notes.length,
-                  itemBuilder: (context, index) {
-                    final note = notes[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: _buildNoteCard(
-                        title: note.title,
-                        subtitle: note.subtitle,
-                        iconBg: note.iconBg,
-                        iconColor: note.iconColor,
-                        icon: note.icon,
-                        onTap: () {
-                          Navigator.pushNamed(context, AppRouter.noteEditor);
+                child: notes.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(
+                              Icons.description_outlined,
+                              size: 48,
+                              color: AppColors.textDarkSecondary,
+                            ),
+                            SizedBox(height: 12),
+                            Text(
+                              'No notes created yet',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                            SizedBox(height: 6),
+                            Text(
+                              'Tap + below to create a new note!',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textDarkSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: notes.length,
+                        itemBuilder: (context, index) {
+                          final note = notes[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12.0),
+                            child: _buildNoteCard(
+                              title: note.title,
+                              subtitle: note.subtitle,
+                              iconBg: note.iconBg,
+                              iconColor: note.iconColor,
+                              icon: note.icon,
+                              onTap: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  AppRouter.noteEditor,
+                                  arguments: note,
+                                );
+                              },
+                            ),
+                          );
                         },
                       ),
-                    );
-                  },
-                ),
               ),
             ],
           ),
