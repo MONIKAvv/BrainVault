@@ -230,7 +230,73 @@ class SummaryItem {
   }
 }
 
-/// Central Repository for user notes, mind maps, and summaries
+class TaskItem {
+  final String id;
+  final String title;
+  final String time;
+  final Color color;
+  final bool completed;
+  final DateTime createdAt;
+
+  TaskItem({
+    required this.id,
+    required this.title,
+    required this.time,
+    required this.color,
+    required this.completed,
+    required this.createdAt,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'time': time,
+      'colorInt': color.toARGB32(),
+      'completed': completed,
+      'createdAt': Timestamp.fromDate(createdAt),
+    };
+  }
+
+  factory TaskItem.fromMap(Map<String, dynamic> map, {String fallbackId = ''}) {
+    DateTime parseDate(dynamic val) {
+      if (val is Timestamp) return val.toDate();
+      if (val is String) return DateTime.tryParse(val) ?? DateTime.now();
+      return DateTime.now();
+    }
+
+    final int colorInt = map['colorInt'] is int ? map['colorInt'] : 0xFF7C3AED;
+
+    return TaskItem(
+      id: map['id'] ?? fallbackId,
+      title: map['title'] ?? 'Untitled Task',
+      time: map['time'] ?? 'Just now',
+      color: Color(colorInt),
+      completed: map['completed'] as bool? ?? false,
+      createdAt: parseDate(map['createdAt']),
+    );
+  }
+
+  TaskItem copyWith({
+    String? id,
+    String? title,
+    String? time,
+    Color? color,
+    bool? completed,
+    DateTime? createdAt,
+  }) {
+    return TaskItem(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      time: time ?? this.time,
+      color: color ?? this.color,
+      completed: completed ?? this.completed,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+}
+
+/// Central Repository for user notes, mind maps, summaries, and tasks
 /// Automatically syncs with Cloud Firestore top-level collections.
 class VaultRepository extends ChangeNotifier {
   static final VaultRepository instance = VaultRepository._internal();
@@ -244,10 +310,12 @@ class VaultRepository extends ChangeNotifier {
   final List<NoteItem> _notes = [];
   final List<MindMapItem> _mindMaps = [];
   final List<SummaryItem> _summaries = [];
+  final List<TaskItem> _tasks = [];
 
   List<NoteItem> get notes => List.unmodifiable(_notes);
   List<MindMapItem> get mindMaps => List.unmodifiable(_mindMaps);
   List<SummaryItem> get summaries => List.unmodifiable(_summaries);
+  List<TaskItem> get tasks => List.unmodifiable(_tasks);
 
   void _listenToFirestore() {
     // Listen to real-time updates from Cloud Firestore
@@ -266,6 +334,12 @@ class VaultRepository extends ChangeNotifier {
     _firestoreService.streamSummaries().listen((summaryMaps) {
       _summaries.clear();
       _summaries.addAll(summaryMaps.map((map) => SummaryItem.fromMap(map)));
+      notifyListeners();
+    }, onError: (_) {});
+
+    _firestoreService.streamTasks().listen((taskMaps) {
+      _tasks.clear();
+      _tasks.addAll(taskMaps.map((map) => TaskItem.fromMap(map)));
       notifyListeners();
     }, onError: (_) {});
   }
@@ -296,6 +370,17 @@ class VaultRepository extends ChangeNotifier {
     _firestoreService.saveSummary(summary.toMap());
   }
 
+  void saveTask(TaskItem task) {
+    final existingIndex = _tasks.indexWhere((t) => t.id == task.id);
+    if (existingIndex >= 0) {
+      _tasks[existingIndex] = task;
+    } else {
+      _tasks.insert(0, task);
+    }
+    notifyListeners();
+    _firestoreService.saveTask(task.toMap());
+  }
+
   void deleteNote(String noteId) {
     _notes.removeWhere((item) => item.id == noteId);
     notifyListeners();
@@ -312,5 +397,11 @@ class VaultRepository extends ChangeNotifier {
     _summaries.removeWhere((item) => item.id == summaryId);
     notifyListeners();
     _firestoreService.deleteSummary(summaryId);
+  }
+
+  void deleteTask(String taskId) {
+    _tasks.removeWhere((item) => item.id == taskId);
+    notifyListeners();
+    _firestoreService.deleteTask(taskId);
   }
 }

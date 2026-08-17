@@ -3,6 +3,8 @@ import 'package:brainvault/app/router.dart';
 import 'package:brainvault/app/theme/app_colors.dart';
 import 'package:brainvault/app/theme/app_text_styles.dart';
 
+import 'package:brainvault/core/repositories/vault_repository.dart';
+
 // ── Data models ──────────────────────────────────────────────────────────────
 class _SearchResult {
   final String title;
@@ -12,6 +14,7 @@ class _SearchResult {
   final Color iconBg;
   final Color iconColor;
   final String route;
+  final dynamic objectArg;
 
   const _SearchResult({
     required this.title,
@@ -21,77 +24,9 @@ class _SearchResult {
     required this.iconBg,
     required this.iconColor,
     required this.route,
+    this.objectArg,
   });
 }
-
-const _allResults = <_SearchResult>[
-  // Notes
-  _SearchResult(
-    title: 'Project Ideas',
-    subtitle: 'Today, 9:30 AM',
-    category: 'Notes',
-    icon: Icons.edit_note_rounded,
-    iconBg: AppColors.noteOrangeBg,
-    iconColor: AppColors.noteOrangeIcon,
-    route: AppRouter.noteEditor,
-  ),
-  _SearchResult(
-    title: 'Project Presentation',
-    subtitle: 'Yesterday, 2:30 PM',
-    category: 'Notes',
-    icon: Icons.article_outlined,
-    iconBg: AppColors.notePurpleBg,
-    iconColor: AppColors.notePurpleIcon,
-    route: AppRouter.noteEditor,
-  ),
-  _SearchResult(
-    title: 'Study Plan',
-    subtitle: 'Yesterday, 8:15 AM',
-    category: 'Notes',
-    icon: Icons.menu_book_outlined,
-    iconBg: Color(0xFFECFDF5),
-    iconColor: Color(0xFF10B981),
-    route: AppRouter.noteEditor,
-  ),
-  // Tasks
-  _SearchResult(
-    title: 'Project Presentation',
-    subtitle: 'Today, 10:00 AM',
-    category: 'Tasks',
-    icon: Icons.check_box_outlined,
-    iconBg: AppColors.taskRedBg,
-    iconColor: AppColors.taskRedIcon,
-    route: AppRouter.tasks,
-  ),
-  _SearchResult(
-    title: 'Math Assignment',
-    subtitle: 'Today, 11:00 AM',
-    category: 'Tasks',
-    icon: Icons.assignment_outlined,
-    iconBg: AppColors.quickActionTaskBg,
-    iconColor: AppColors.quickActionTaskIcon,
-    route: AppRouter.tasks,
-  ),
-  // Files
-  _SearchResult(
-    title: 'Project Brief.pdf',
-    subtitle: '2.4 MB · PDF Document',
-    category: 'Files',
-    icon: Icons.picture_as_pdf_outlined,
-    iconBg: Color(0xFFFEF2F2),
-    iconColor: Color(0xFFEF4444),
-    route: AppRouter.folder,
-  ),
-  _SearchResult(
-    title: 'Design Assets.zip',
-    subtitle: '14.6 MB · Archive',
-    category: 'Files',
-    icon: Icons.folder_zip_outlined,
-    iconBg: AppColors.quickActionAiBg,
-    iconColor: AppColors.quickActionAiIcon,
-    route: AppRouter.folder,
-  ),
-];
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 class SearchScreen extends StatefulWidget {
@@ -108,6 +43,7 @@ class _SearchScreenState extends State<SearchScreen>
 
   final List<String> _tabs = ['All', 'Notes', 'Tasks', 'Files'];
   String _query = '';
+  final VaultRepository _repository = VaultRepository.instance;
 
   @override
   void initState() {
@@ -116,18 +52,61 @@ class _SearchScreenState extends State<SearchScreen>
     _searchController.addListener(() {
       setState(() => _query = _searchController.text.trim().toLowerCase());
     });
+    _repository.addListener(_onRepositoryChanged);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _tabController.dispose();
+    _repository.removeListener(_onRepositoryChanged);
     super.dispose();
+  }
+
+  void _onRepositoryChanged() {
+    if (mounted) setState(() {});
+  }
+
+  List<_SearchResult> get _allDynamicResults {
+    final results = <_SearchResult>[];
+
+    // Dynamic Notes
+    for (final note in _repository.notes) {
+      results.add(
+        _SearchResult(
+          title: note.title,
+          subtitle: note.subtitle.isNotEmpty ? note.subtitle : 'Note',
+          category: 'Notes',
+          icon: note.icon,
+          iconBg: note.iconBg,
+          iconColor: note.iconColor,
+          route: AppRouter.noteEditor,
+          objectArg: note,
+        ),
+      );
+    }
+
+    // Dynamic Tasks
+    for (final task in _repository.tasks) {
+      results.add(
+        _SearchResult(
+          title: task.title,
+          subtitle: task.time,
+          category: 'Tasks',
+          icon: task.completed ? Icons.check_box_outlined : Icons.check_box_outline_blank_rounded,
+          iconBg: AppColors.quickActionTaskBg,
+          iconColor: task.color,
+          route: AppRouter.tasks,
+        ),
+      );
+    }
+
+    return results;
   }
 
   List<_SearchResult> get _filtered {
     final tab = _tabs[_tabController.index];
-    return _allResults.where((r) {
+    return _allDynamicResults.where((r) {
       final matchesTab = tab == 'All' || r.category == tab;
       final matchesQuery =
           _query.isEmpty || r.title.toLowerCase().contains(_query);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/repositories/vault_repository.dart';
 
 /// Screen #7: Home Dashboard
 class HomeScreen extends StatefulWidget {
@@ -12,6 +13,23 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedBottomIndex = 0;
+  final VaultRepository _repository = VaultRepository.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _repository.addListener(_onRepositoryChanged);
+  }
+
+  @override
+  void dispose() {
+    _repository.removeListener(_onRepositoryChanged);
+    super.dispose();
+  }
+
+  void _onRepositoryChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,28 +129,30 @@ class _HomeScreenState extends State<HomeScreen> {
     return Row(
       children: [
         Expanded(
-          child: Row(
-            children: const [
-              Icon(
-                Icons.search_rounded,
-                color: AppColors.textDarkSecondary,
-                size: 20,
+          child: GestureDetector(
+            onTap: () => Navigator.pushNamed(context, AppRouter.search),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.borderLight),
               ),
-              SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search notes, tasks, files...',
-                    hintStyle: TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF9CA3AF),
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
+              child: Row(
+                children: const [
+                  Icon(
+                    Icons.search_rounded,
+                    color: AppColors.textDarkSecondary,
+                    size: 20,
                   ),
-                ),
+                  SizedBox(width: 10),
+                  Text(
+                    'Search notes, tasks, files...',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
         const SizedBox(width: 12),
@@ -244,6 +264,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Recent Notes Section
   Widget _buildRecentNotesSection() {
+    final recentNotes = _repository.notes.take(3).toList();
+
     return Column(
       children: [
         Row(
@@ -271,32 +293,47 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        _buildNoteTile(
-          iconBg: AppColors.noteOrangeBg,
-          iconColor: AppColors.noteOrangeIcon,
-          customLetter: 'E',
-          title: 'Project Ideas',
-          subtitle: 'Today, 9:30 AM',
-          onTap: () => Navigator.pushNamed(context, AppRouter.noteEditor),
-        ),
-        const SizedBox(height: 10),
-        _buildNoteTile(
-          iconBg: AppColors.notePurpleBg,
-          iconColor: AppColors.notePurpleIcon,
-          icon: Icons.article_outlined,
-          title: 'Study Plan',
-          subtitle: 'Today, 8:15 AM',
-          onTap: () => Navigator.pushNamed(context, AppRouter.noteEditor),
-        ),
-        const SizedBox(height: 10),
-        _buildNoteTile(
-          iconBg: AppColors.notePurpleBg,
-          iconColor: AppColors.notePurpleIcon,
-          icon: Icons.article_outlined,
-          title: 'Book Summary',
-          subtitle: 'Yesterday, 6:45 PM',
-          onTap: () => Navigator.pushNamed(context, AppRouter.noteEditor),
-        ),
+        if (recentNotes.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.borderLight),
+            ),
+            child: const Center(
+              child: Text(
+                'No notes created yet. Tap "New Note" above!',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textDarkSecondary,
+                ),
+              ),
+            ),
+          )
+        else
+          ...recentNotes.map((note) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10.0),
+              child: _buildNoteTile(
+                iconBg: note.iconBg,
+                iconColor: note.iconColor,
+                customLetter: note.title.isNotEmpty
+                    ? note.title[0].toUpperCase()
+                    : 'N',
+                title: note.title,
+                subtitle: note.subtitle.isNotEmpty
+                    ? note.subtitle
+                    : _formatDate(note.createdAt),
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  AppRouter.noteEditor,
+                  arguments: note,
+                ),
+              ),
+            );
+          }),
       ],
     );
   }
@@ -382,6 +419,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Upcoming Tasks Section
   Widget _buildUpcomingTasksSection() {
+    final upcomingTasks = _repository.tasks.take(3).toList();
+
     return Column(
       children: [
         Row(
@@ -409,70 +448,189 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        InkWell(
-          onTap: () => Navigator.pushNamed(context, AppRouter.tasks),
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.all(12),
+        if (upcomingTasks.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.borderLight),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.taskRedBg,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.calendar_today_rounded,
-                    color: AppColors.taskRedIcon,
-                    size: 20,
-                  ),
+            child: const Center(
+              child: Text(
+                'No tasks scheduled. Tap "New Task" above!',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textDarkSecondary,
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Math Assignment',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Today, 11:00 AM',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textDarkSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppColors.textDarkSecondary),
-                  ),
-                ),
-                const SizedBox(width: 4),
-              ],
+              ),
             ),
-          ),
-        ),
+          )
+        else
+          ...upcomingTasks.map((task) => _buildHomeTaskTile(task)),
       ],
     );
+  }
+
+  Widget _buildHomeTaskTile(TaskItem task) {
+    final Color accentColor = task.color;
+    final bool completed = task.completed;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10.0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: Row(
+          children: [
+            // Custom Checkbox
+            GestureDetector(
+              onTap: () {
+                final updatedTask = task.copyWith(completed: !completed);
+                _repository.saveTask(updatedTask);
+              },
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: completed ? accentColor : Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: accentColor, width: 2),
+                ),
+                child: completed
+                    ? const Icon(
+                        Icons.check_rounded,
+                        size: 14,
+                        color: Colors.white,
+                      )
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _showEditTaskDialog(task),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task.title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: completed
+                            ? AppColors.textDarkSecondary
+                            : AppColors.textDark,
+                        decoration: completed
+                            ? TextDecoration.lineThrough
+                            : TextDecoration.none,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      task.time,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textDarkSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(
+                Icons.edit_outlined,
+                size: 18,
+                color: AppColors.textDarkSecondary,
+              ),
+              onPressed: () => _showEditTaskDialog(task),
+              tooltip: 'Edit Task',
+            ),
+            IconButton(
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                size: 18,
+                color: Colors.redAccent,
+              ),
+              onPressed: () => _repository.deleteTask(task.id),
+              tooltip: 'Delete Task',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditTaskDialog(TaskItem task) {
+    final titleController = TextEditingController(text: task.title);
+    final timeController = TextEditingController(text: task.time);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Edit Task'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Task Title'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: timeController,
+              decoration: const InputDecoration(labelText: 'Time / Date'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              _repository.deleteTask(task.id);
+              Navigator.pop(context);
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryViolet,
+            ),
+            onPressed: () {
+              final titleText = titleController.text.trim();
+              final timeText = timeController.text.trim();
+              if (titleText.isNotEmpty) {
+                final updatedTask = task.copyWith(
+                  title: titleText,
+                  time: timeText.isNotEmpty ? timeText : task.time,
+                );
+                _repository.saveTask(updatedTask);
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('Save', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime dt) {
+    return '${dt.day}/${dt.month}/${dt.year}';
   }
 
   // Bottom Navigation Bar

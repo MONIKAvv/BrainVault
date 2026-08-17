@@ -3,6 +3,8 @@ import 'package:brainvault/app/theme/app_colors.dart';
 import 'package:brainvault/app/theme/app_text_styles.dart';
 import 'package:flutter/material.dart';
 
+import 'package:brainvault/core/repositories/vault_repository.dart';
+
 // ── Data ─────────────────────────────────────────────────────────────────────
 class _FolderData {
   final String name;
@@ -39,6 +41,8 @@ class FoldersScreen extends StatefulWidget {
 }
 
 class _FoldersScreenState extends State<FoldersScreen> {
+  final VaultRepository _repository = VaultRepository.instance;
+
   static const List<_FolderData> _folders = [
     _FolderData('Personal', 24, AppColors.primaryPurple),
     _FolderData('Work', 18, AppColors.info),
@@ -47,49 +51,50 @@ class _FoldersScreenState extends State<FoldersScreen> {
     _FolderData('Projects', 8, AppColors.error),
   ];
 
-  // Items inside "Project" folder (simulating a folder drill-down)
-  static const List<_FolderItem> _projectItems = [
-    _FolderItem(
-      title: 'Project Ideas',
-      subtitle: 'Today, 9:30 AM',
-      section: 'Notes',
-      icon: Icons.edit_note_rounded,
-      iconBg: AppColors.noteOrangeBg,
-      iconColor: AppColors.noteOrangeIcon,
-    ),
-    _FolderItem(
-      title: 'Project Presentation',
-      subtitle: 'Yesterday, 2:30 PM',
-      section: 'Notes',
-      icon: Icons.article_outlined,
-      iconBg: AppColors.notePurpleBg,
-      iconColor: AppColors.notePurpleIcon,
-    ),
-    _FolderItem(
-      title: 'Project Presentation',
-      subtitle: 'Today, 10:00 AM',
-      section: 'Tasks',
-      icon: Icons.check_box_outlined,
-      iconBg: AppColors.taskRedBg,
-      iconColor: AppColors.taskRedIcon,
-    ),
-    _FolderItem(
-      title: 'Project Brief.pdf',
-      subtitle: '2.4 MB · PDF Document',
-      section: 'Files',
-      icon: Icons.picture_as_pdf_outlined,
-      iconBg: Color(0xFFFEF2F2),
-      iconColor: Color(0xFFEF4444),
-    ),
-    _FolderItem(
-      title: 'Design Assets.zip',
-      subtitle: '14.6 MB · Archive',
-      section: 'Files',
-      icon: Icons.folder_zip_outlined,
-      iconBg: AppColors.quickActionAiBg,
-      iconColor: AppColors.quickActionAiIcon,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _repository.addListener(_onRepositoryChanged);
+  }
+
+  @override
+  void dispose() {
+    _repository.removeListener(_onRepositoryChanged);
+    super.dispose();
+  }
+
+  void _onRepositoryChanged() {
+    if (mounted) setState(() {});
+  }
+
+  List<_FolderItem> get _projectItems {
+    final items = <_FolderItem>[];
+    for (final note in _repository.notes) {
+      items.add(
+        _FolderItem(
+          title: note.title,
+          subtitle: note.subtitle.isNotEmpty ? note.subtitle : 'Note',
+          section: 'Notes',
+          icon: note.icon,
+          iconBg: note.iconBg,
+          iconColor: note.iconColor,
+        ),
+      );
+    }
+    for (final task in _repository.tasks) {
+      items.add(
+        _FolderItem(
+          title: task.title,
+          subtitle: task.time,
+          section: 'Tasks',
+          icon: Icons.check_box_outlined,
+          iconBg: AppColors.taskRedBg,
+          iconColor: task.color,
+        ),
+      );
+    }
+    return items;
+  }
 
   String? _openFolder;
 

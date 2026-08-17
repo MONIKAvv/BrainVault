@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
 
+import '../../../../core/repositories/vault_repository.dart';
+
 /// Screen #12: Calendar Screen ("May 2024")
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -12,8 +14,25 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen> {
   int _selectedDay = 15;
+  final VaultRepository _repository = VaultRepository.instance;
 
   final List<String> _daysOfWeek = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+
+  @override
+  void initState() {
+    super.initState();
+    _repository.addListener(_onRepositoryChanged);
+  }
+
+  @override
+  void dispose() {
+    _repository.removeListener(_onRepositoryChanged);
+    super.dispose();
+  }
+
+  void _onRepositoryChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -155,28 +174,31 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
               // Agenda Task Items
               Expanded(
-                child: ListView(
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    _buildAgendaTile(
-                      title: 'Math Assignment',
-                      time: '11:00 AM',
-                      accentColor: const Color(0xFF10B981),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildAgendaTile(
-                      title: 'Complete UI Design',
-                      time: '2:00 PM',
-                      accentColor: const Color(0xFF7C3AED),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildAgendaTile(
-                      title: 'Workout',
-                      time: '7:00 PM',
-                      accentColor: const Color(0xFFEF4444),
-                    ),
-                  ],
-                ),
+                child: _repository.tasks.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No tasks scheduled for this day',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textDarkSecondary,
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: _repository.tasks.length,
+                        itemBuilder: (context, index) {
+                          final task = _repository.tasks[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10.0),
+                            child: _buildAgendaTile(
+                              title: task.title,
+                              time: task.time,
+                              accentColor: task.color,
+                            ),
+                          );
+                        },
+                      ),
               ),
             ],
           ),
