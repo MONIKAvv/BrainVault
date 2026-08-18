@@ -32,9 +32,94 @@ class _NotesListScreenState extends State<NotesListScreen> {
     if (mounted) setState(() {});
   }
 
+  void _showFolderPicker(NoteItem note) {
+    final folders = ['Personal', 'Work', 'Study', 'Ideas', 'Projects'];
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Move "${note.title}" to Folder',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...folders.map((folder) {
+                final isCurrent = note.folderName == folder;
+                return ListTile(
+                  leading: Icon(
+                    Icons.folder_outlined,
+                    color: isCurrent ? AppColors.primaryViolet : AppColors.textDarkSecondary,
+                  ),
+                  title: Text(
+                    folder,
+                    style: TextStyle(
+                      fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                      color: isCurrent ? AppColors.primaryViolet : AppColors.textDark,
+                    ),
+                  ),
+                  trailing: isCurrent ? const Icon(Icons.check_rounded, color: AppColors.primaryViolet) : null,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _repository.moveNoteToFolder(note.id, folder);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Moved note to "$folder"'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                );
+              }),
+              if (note.folderName != null) ...[
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.folder_off_outlined, color: AppColors.error),
+                  title: const Text('Remove from Folder', style: TextStyle(color: AppColors.error)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _repository.moveNoteToFolder(note.id, null);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Removed note from folder'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+              ]
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final notes = _repository.notes;
+    final allNotes = _repository.notes;
+    final notes = _selectedFilterIndex == 1
+        ? allNotes.where((n) => n.isPinned).toList()
+        : allNotes;
 
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
@@ -83,25 +168,31 @@ class _NotesListScreenState extends State<NotesListScreen> {
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
+                          children: [
                             Icon(
-                              Icons.description_outlined,
+                              _selectedFilterIndex == 1
+                                  ? Icons.bookmark_border_rounded
+                                  : Icons.description_outlined,
                               size: 48,
                               color: AppColors.textDarkSecondary,
                             ),
-                            SizedBox(height: 12),
+                            const SizedBox(height: 12),
                             Text(
-                              'No notes created yet',
-                              style: TextStyle(
+                              _selectedFilterIndex == 1
+                                  ? 'No pinned notes'
+                                  : 'No notes created yet',
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.textDark,
                               ),
                             ),
-                            SizedBox(height: 6),
+                            const SizedBox(height: 6),
                             Text(
-                              'Tap + below to create a new note!',
-                              style: TextStyle(
+                              _selectedFilterIndex == 1
+                                  ? 'Click the bookmark icon on any note to pin it!'
+                                  : 'Tap + below to create a new note!',
+                              style: const TextStyle(
                                 fontSize: 13,
                                 color: AppColors.textDarkSecondary,
                               ),
@@ -116,20 +207,7 @@ class _NotesListScreenState extends State<NotesListScreen> {
                           final note = notes[index];
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12.0),
-                            child: _buildNoteCard(
-                              title: note.title,
-                              subtitle: note.subtitle,
-                              iconBg: note.iconBg,
-                              iconColor: note.iconColor,
-                              icon: note.icon,
-                              onTap: () {
-                                Navigator.pushNamed(
-                                  context,
-                                  AppRouter.noteEditor,
-                                  arguments: note,
-                                );
-                              },
-                            ),
+                            child: _buildNoteCard(note: note),
                           );
                         },
                       ),
@@ -226,16 +304,16 @@ class _NotesListScreenState extends State<NotesListScreen> {
     );
   }
 
-  Widget _buildNoteCard({
-    required String title,
-    required String subtitle,
-    required Color iconBg,
-    required Color iconColor,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildNoteCard({required NoteItem note}) {
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          AppRouter.noteEditor,
+          arguments: note,
+        );
+      },
+      onLongPress: () => _showFolderPicker(note),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -250,27 +328,51 @@ class _NotesListScreenState extends State<NotesListScreen> {
               width: 46,
               height: 46,
               decoration: BoxDecoration(
-                color: iconBg,
+                color: note.iconBg,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: iconColor, size: 22),
+              child: Icon(note.icon, color: note.iconColor, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          note.title,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                      ),
+                      if (note.folderName != null) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryViolet.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            note.folderName!,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primaryViolet,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    subtitle,
+                    note.subtitle,
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.textDarkSecondary,
@@ -280,12 +382,22 @@ class _NotesListScreenState extends State<NotesListScreen> {
               ),
             ),
             IconButton(
-              icon: const Icon(
-                Icons.bookmark_outline_rounded,
-                color: AppColors.textDarkSecondary,
+              icon: Icon(
+                note.isPinned ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
+                color: note.isPinned ? AppColors.primaryViolet : AppColors.textDarkSecondary,
                 size: 20,
               ),
-              onPressed: () {},
+              onPressed: () {
+                _repository.toggleNotePin(note.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      note.isPinned ? 'Unpinned note' : 'Moved note to Pinned',
+                    ),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              },
             ),
           ],
         ),

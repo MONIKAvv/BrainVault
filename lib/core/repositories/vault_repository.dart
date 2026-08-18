@@ -20,6 +20,8 @@ class NoteItem {
   final bool isBold;
   final bool isItalic;
   final bool isUnderline;
+  final bool isPinned;
+  final String? folderName;
 
   NoteItem({
     required this.id,
@@ -38,6 +40,8 @@ class NoteItem {
     this.isBold = false,
     this.isItalic = false,
     this.isUnderline = false,
+    this.isPinned = false,
+    this.folderName,
   });
 
   Map<String, dynamic> toMap() {
@@ -58,6 +62,8 @@ class NoteItem {
       'isBold': isBold,
       'isItalic': isItalic,
       'isUnderline': isUnderline,
+      'isPinned': isPinned,
+      'folderName': folderName,
     };
   }
 
@@ -96,6 +102,50 @@ class NoteItem {
       isBold: map['isBold'] as bool? ?? false,
       isItalic: map['isItalic'] as bool? ?? false,
       isUnderline: map['isUnderline'] as bool? ?? false,
+      isPinned: map['isPinned'] as bool? ?? false,
+      folderName: map['folderName'] as String?,
+    );
+  }
+
+  NoteItem copyWith({
+    String? id,
+    String? title,
+    String? subtitle,
+    String? content,
+    DateTime? createdAt,
+    Color? iconBg,
+    Color? iconColor,
+    IconData? icon,
+    String? imageUrl,
+    String? audioUrl,
+    List<Map<String, dynamic>>? checklist,
+    String? fontFamily,
+    double? fontSize,
+    bool? isBold,
+    bool? isItalic,
+    bool? isUnderline,
+    bool? isPinned,
+    String? folderName,
+  }) {
+    return NoteItem(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      subtitle: subtitle ?? this.subtitle,
+      content: content ?? this.content,
+      createdAt: createdAt ?? this.createdAt,
+      iconBg: iconBg ?? this.iconBg,
+      iconColor: iconColor ?? this.iconColor,
+      icon: icon ?? this.icon,
+      imageUrl: imageUrl ?? this.imageUrl,
+      audioUrl: audioUrl ?? this.audioUrl,
+      checklist: checklist ?? this.checklist,
+      fontFamily: fontFamily ?? this.fontFamily,
+      fontSize: fontSize ?? this.fontSize,
+      isBold: isBold ?? this.isBold,
+      isItalic: isItalic ?? this.isItalic,
+      isUnderline: isUnderline ?? this.isUnderline,
+      isPinned: isPinned ?? this.isPinned,
+      folderName: folderName ?? this.folderName,
     );
   }
 }
@@ -237,6 +287,9 @@ class TaskItem {
   final Color color;
   final bool completed;
   final DateTime createdAt;
+  final DateTime dueDate;
+  final bool isPinned;
+  final String? folderName;
 
   TaskItem({
     required this.id,
@@ -245,7 +298,10 @@ class TaskItem {
     required this.color,
     required this.completed,
     required this.createdAt,
-  });
+    DateTime? dueDate,
+    this.isPinned = false,
+    this.folderName,
+  }) : dueDate = dueDate ?? createdAt;
 
   Map<String, dynamic> toMap() {
     return {
@@ -255,6 +311,9 @@ class TaskItem {
       'colorInt': color.toARGB32(),
       'completed': completed,
       'createdAt': Timestamp.fromDate(createdAt),
+      'dueDate': Timestamp.fromDate(dueDate),
+      'isPinned': isPinned,
+      'folderName': folderName,
     };
   }
 
@@ -266,6 +325,8 @@ class TaskItem {
     }
 
     final int colorInt = map['colorInt'] is int ? map['colorInt'] : 0xFF7C3AED;
+    final created = parseDate(map['createdAt']);
+    final due = map['dueDate'] != null ? parseDate(map['dueDate']) : created;
 
     return TaskItem(
       id: map['id'] ?? fallbackId,
@@ -273,7 +334,10 @@ class TaskItem {
       time: map['time'] ?? 'Just now',
       color: Color(colorInt),
       completed: map['completed'] as bool? ?? false,
-      createdAt: parseDate(map['createdAt']),
+      createdAt: created,
+      dueDate: due,
+      isPinned: map['isPinned'] as bool? ?? false,
+      folderName: map['folderName'] as String?,
     );
   }
 
@@ -284,6 +348,9 @@ class TaskItem {
     Color? color,
     bool? completed,
     DateTime? createdAt,
+    DateTime? dueDate,
+    bool? isPinned,
+    String? folderName,
   }) {
     return TaskItem(
       id: id ?? this.id,
@@ -292,6 +359,9 @@ class TaskItem {
       color: color ?? this.color,
       completed: completed ?? this.completed,
       createdAt: createdAt ?? this.createdAt,
+      dueDate: dueDate ?? this.dueDate,
+      isPinned: isPinned ?? this.isPinned,
+      folderName: folderName ?? this.folderName,
     );
   }
 }
@@ -356,6 +426,22 @@ class VaultRepository extends ChangeNotifier {
     _firestoreService.saveNote(note.toMap());
   }
 
+  void toggleNotePin(String noteId) {
+    final index = _notes.indexWhere((n) => n.id == noteId);
+    if (index >= 0) {
+      final updated = _notes[index].copyWith(isPinned: !_notes[index].isPinned);
+      addNote(updated);
+    }
+  }
+
+  void moveNoteToFolder(String noteId, String? folderName) {
+    final index = _notes.indexWhere((n) => n.id == noteId);
+    if (index >= 0) {
+      final updated = _notes[index].copyWith(folderName: folderName);
+      addNote(updated);
+    }
+  }
+
   void addMindMap(MindMapItem mindMap) {
     _mindMaps.insert(0, mindMap);
     notifyListeners();
@@ -379,6 +465,22 @@ class VaultRepository extends ChangeNotifier {
     }
     notifyListeners();
     _firestoreService.saveTask(task.toMap());
+  }
+
+  void toggleTaskPin(String taskId) {
+    final index = _tasks.indexWhere((t) => t.id == taskId);
+    if (index >= 0) {
+      final updated = _tasks[index].copyWith(isPinned: !_tasks[index].isPinned);
+      saveTask(updated);
+    }
+  }
+
+  void moveTaskToFolder(String taskId, String? folderName) {
+    final index = _tasks.indexWhere((t) => t.id == taskId);
+    if (index >= 0) {
+      final updated = _tasks[index].copyWith(folderName: folderName);
+      saveTask(updated);
+    }
   }
 
   void deleteNote(String noteId) {

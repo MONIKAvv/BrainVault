@@ -3,7 +3,7 @@ import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/repositories/vault_repository.dart';
 
-/// Screen for displaying saved and AI-generated Summaries
+/// Screen for displaying saved, custom, and AI-generated Summaries
 class SummaryScreen extends StatefulWidget {
   const SummaryScreen({super.key});
 
@@ -66,9 +66,8 @@ class _SummaryScreenState extends State<SummaryScreen> {
               Icons.add_rounded,
               color: AppColors.textDark,
             ),
-            onPressed: () {
-              Navigator.pushNamed(context, AppRouter.aiAssistant);
-            },
+            onPressed: () => _showCreateOptionsModal(),
+            tooltip: 'Add Summary',
           ),
         ],
       ),
@@ -86,7 +85,170 @@ class _SummaryScreenState extends State<SummaryScreen> {
                 },
               ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showCreateOptionsModal(),
+        backgroundColor: AppColors.primaryViolet,
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+      ),
       bottomNavigationBar: _buildBottomNavigationBar(context),
+    );
+  }
+
+  void _showCreateOptionsModal() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Add Summary',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFFEF3C7),
+                child: Icon(Icons.edit_note_rounded, color: Color(0xD9D97706)),
+              ),
+              title: const Text('Create Custom Summary', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text('Write your own summary and key takeaways'),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.pushNamed(context, AppRouter.createSummary);
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFF3E8FF),
+                child: Icon(Icons.auto_awesome, color: AppColors.primaryViolet),
+              ),
+              title: const Text('Generate with AI', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text('Summarize YouTube links or articles instantly'),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.pushNamed(context, AppRouter.aiAssistant);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCreateCustomSummaryDialog() {
+    final titleController = TextEditingController();
+    final categoryController = TextEditingController(text: 'General');
+    final sourceUrlController = TextEditingController();
+    final overviewController = TextEditingController();
+    final bulletsController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Create Custom Summary'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Title *',
+                  hintText: 'e.g. Clean Code Principles',
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: categoryController,
+                decoration: const InputDecoration(
+                  labelText: 'Category / Source Type',
+                  hintText: 'e.g. YouTube, Book, Article',
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: sourceUrlController,
+                decoration: const InputDecoration(
+                  labelText: 'Source Link / URL (Optional)',
+                  hintText: 'e.g. https://example.com',
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: overviewController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Overview / Summary Text *',
+                  hintText: 'Write a brief summary of the main points...',
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: bulletsController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Key Takeaways (Separated by new lines or commas)',
+                  hintText: 'Point 1\nPoint 2\nPoint 3',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryViolet,
+            ),
+            onPressed: () {
+              final titleText = titleController.text.trim();
+              final overviewText = overviewController.text.trim();
+              if (titleText.isNotEmpty && overviewText.isNotEmpty) {
+                final rawBullets = bulletsController.text;
+                final bulletList = rawBullets.contains('\n')
+                    ? rawBullets.split('\n').map((e) => e.trim()).where((e) => e.isNotEmpty).toList()
+                    : rawBullets.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+
+                final summary = SummaryItem(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  title: titleText,
+                  sourceCategory: categoryController.text.trim().isNotEmpty
+                      ? categoryController.text.trim()
+                      : 'General',
+                  sourceUrl: sourceUrlController.text.trim(),
+                  overview: overviewText,
+                  bulletPoints: bulletList,
+                  createdAt: DateTime.now(),
+                );
+
+                _repository.addSummary(summary);
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Save Summary', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -118,7 +280,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Paste YouTube links or article URLs in Brain AI to generate instant summaries',
+            'Create your own custom summary or use Brain AI to summarize URLs',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
@@ -126,20 +288,39 @@ class _SummaryScreenState extends State<SummaryScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pushNamed(context, AppRouter.aiAssistant);
-            },
-            icon: const Icon(Icons.auto_awesome, size: 18),
-            label: const Text('Summarize Content'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryViolet,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.pushNamed(context, AppRouter.createSummary),
+                  icon: const Icon(Icons.edit_note_rounded, size: 18),
+                  label: const Text('Create Summary'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primaryViolet,
+                    side: const BorderSide(color: AppColors.primaryViolet),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, AppRouter.aiAssistant);
+                },
+                icon: const Icon(Icons.auto_awesome, size: 18),
+                label: const Text('AI Summarize'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryViolet,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
+            ],
           ),
         ],
       ),
@@ -204,14 +385,18 @@ class _SummaryScreenState extends State<SummaryScreen> {
                 ),
               ),
               const Spacer(),
-              const Icon(
-                Icons.bookmark_added_rounded,
-                color: AppColors.primaryViolet,
-                size: 18,
+              IconButton(
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Colors.redAccent,
+                  size: 20,
+                ),
+                onPressed: () => _repository.deleteSummary(item.id),
+                tooltip: 'Delete Summary',
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
           Text(
             item.title,
@@ -243,43 +428,43 @@ class _SummaryScreenState extends State<SummaryScreen> {
               height: 1.4,
             ),
           ),
-          const SizedBox(height: 12),
-
-          const Text(
-            'Key Takeaways:',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 6),
-
-          ...item.bulletPoints.map(
-            (bullet) => Padding(
-              padding: const EdgeInsets.only(bottom: 4.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('• ',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryViolet)),
-                  Expanded(
-                    child: Text(
-                      bullet,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textDark,
-                        height: 1.3,
-                      ),
-                    ),
-                  ),
-                ],
+          if (item.bulletPoints.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Text(
+              'Key Takeaways:',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
               ),
             ),
-          ),
+            const SizedBox(height: 6),
+            ...item.bulletPoints.map(
+              (bullet) => Padding(
+                padding: const EdgeInsets.only(bottom: 4.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('• ',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryViolet)),
+                    Expanded(
+                      child: Text(
+                        bullet,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textDark,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

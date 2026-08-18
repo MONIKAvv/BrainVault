@@ -20,6 +20,7 @@ import '../features/tasks/presentation/screens/tasks_screen.dart';
 
 import '../features/mindmap/presentation/screens/mindmap_screen.dart';
 import '../features/summary/presentation/screens/summary_screen.dart';
+import '../features/summary/presentation/screens/create_summary_screen.dart';
 
 /// Navigation router for BrainVault.
 /// Manages named routes and transitions across the app.
@@ -46,6 +47,7 @@ class AppRouter {
   static const String search = '/search';
   static const String mindmap = '/mindmap';
   static const String summary = '/summary';
+  static const String createSummary = '/create_summary';
 
   /// Named routes table
   static Map<String, WidgetBuilder> get routes => {
@@ -67,6 +69,7 @@ class AppRouter {
     search: (context) => const SearchScreen(),
     mindmap: (context) => const MindMapScreen(),
     summary: (context) => const SummaryScreen(),
+    createSummary: (context) => const CreateSummaryScreen(),
   };
 
   /// Route generator fallback & dynamic routing

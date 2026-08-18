@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
-
 import '../../../../core/repositories/vault_repository.dart';
 
-/// Screen #12: Calendar Screen ("May 2024")
+/// Screen #12: Interactive Calendar Screen with Dynamic Date Filtering & Firebase Integration
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
 
@@ -13,14 +12,22 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  int _selectedDay = 15;
+  late DateTime _focusedDate;
+  late DateTime _selectedDate;
   final VaultRepository _repository = VaultRepository.instance;
 
   final List<String> _daysOfWeek = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+  final List<String> _monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
 
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    _focusedDate = DateTime(now.year, now.month);
+    _selectedDate = DateTime(now.year, now.month, now.day);
     _repository.addListener(_onRepositoryChanged);
   }
 
@@ -34,38 +41,76 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (mounted) setState(() {});
   }
 
+  void _previousMonth() {
+    setState(() {
+      _focusedDate = DateTime(_focusedDate.year, _focusedDate.month - 1);
+    });
+  }
+
+  void _nextMonth() {
+    setState(() {
+      _focusedDate = DateTime(_focusedDate.year, _focusedDate.month + 1);
+    });
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  List<TaskItem> get _tasksForSelectedDate {
+    return _repository.tasks.where((t) => _isSameDay(t.dueDate, _selectedDate)).toList();
+  }
+
+  bool _hasTasksOnDate(DateTime date) {
+    return _repository.tasks.any((t) => _isSameDay(t.dueDate, date));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final daysInMonth = DateTime(_focusedDate.year, _focusedDate.month + 1, 0).day;
+    final firstWeekday = DateTime(_focusedDate.year, _focusedDate.month, 1).weekday; // 1 = Monday, 7 = Sunday
+    final leadingBlankSpaces = firstWeekday - 1;
+    final totalGridCells = leadingBlankSpaces + daysInMonth;
+
+    final formattedSelectedDateStr =
+        '${_selectedDate.day} ${_monthNames[_selectedDate.month - 1]} ${_selectedDate.year}';
+
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
         backgroundColor: AppColors.lightBackground,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.menu_rounded, color: AppColors.textDark),
-          onPressed: () {},
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textDark, size: 20),
+          onPressed: () => Navigator.pop(context),
         ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
+            IconButton(
+              icon: const Icon(Icons.chevron_left_rounded, color: AppColors.textDark),
+              onPressed: _previousMonth,
+            ),
             Text(
-              'May 2024',
-              style: TextStyle(
+              '${_monthNames[_focusedDate.month - 1]} ${_focusedDate.year}',
+              style: const TextStyle(
                 color: AppColors.textDark,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(width: 4),
-            Icon(Icons.keyboard_arrow_down_rounded,
-                color: AppColors.textDark, size: 20),
+            IconButton(
+              icon: const Icon(Icons.chevron_right_rounded, color: AppColors.textDark),
+              onPressed: _nextMonth,
+            ),
           ],
         ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.more_horiz_rounded, color: AppColors.textDark),
-            onPressed: () {},
+            icon: const Icon(Icons.add_rounded, color: AppColors.textDark, size: 26),
+            onPressed: () => _showAddOrEditTaskDialog(),
+            tooltip: 'Add Task for Selected Date',
           ),
         ],
       ),
@@ -82,6 +127,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AppColors.borderLight),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
@@ -105,52 +157,62 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Calendar Days Grid (May 2024)
+                    // Dynamic Month Days Grid
                     GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 7,
-                        mainAxisSpacing: 8,
-                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 6,
+                        crossAxisSpacing: 6,
                       ),
-                      itemCount: 35, // 2 blank spaces + 31 days + 2 next month
+                      itemCount: totalGridCells,
                       itemBuilder: (context, index) {
-                        // Offset for May 2024 (1st falls on Wednesday = index 2)
-                        final dayNumber = index - 1;
-                        if (dayNumber < 1 || dayNumber > 31) {
+                        final dayNumber = index - leadingBlankSpaces + 1;
+                        if (dayNumber < 1 || dayNumber > daysInMonth) {
                           return const SizedBox();
                         }
 
-                        final isSelected = dayNumber == _selectedDay;
+                        final cellDate = DateTime(_focusedDate.year, _focusedDate.month, dayNumber);
+                        final isSelected = _isSameDay(cellDate, _selectedDate);
+                        final hasTask = _hasTasksOnDate(cellDate);
 
                         return GestureDetector(
                           onTap: () {
                             setState(() {
-                              _selectedDay = dayNumber;
+                              _selectedDate = cellDate;
                             });
                           },
-                          child: Container(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? AppColors.primaryViolet
                                   : Colors.transparent,
-                              shape: BoxShape.circle,
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Center(
-                              child: Text(
-                                '$dayNumber',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.w500,
-                                  color: isSelected
-                                      ? Colors.white
-                                      : AppColors.textDark,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  '$dayNumber',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                    color: isSelected ? Colors.white : AppColors.textDark,
+                                  ),
                                 ),
-                              ),
+                                if (hasTask)
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 2),
+                                    width: 5,
+                                    height: 5,
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? Colors.white : AppColors.primaryViolet,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         );
@@ -159,43 +221,80 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // Selected Date Agenda Section
-              Text(
-                'Today, $_selectedDay May',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
+              // Selected Date Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Tasks for $formattedSelectedDateStr',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => _showAddOrEditTaskDialog(),
+                    child: const Text(
+                      '+ Add Task',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryViolet,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
 
-              // Agenda Task Items
+              // Tasks List for Selected Date
               Expanded(
-                child: _repository.tasks.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'No tasks scheduled for this day',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textDarkSecondary,
-                          ),
+                child: _tasksForSelectedDate.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.event_note_rounded,
+                              size: 44,
+                              color: AppColors.textDarkSecondary,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'No tasks scheduled for $formattedSelectedDateStr',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textDarkSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            ElevatedButton.icon(
+                              onPressed: () => _showAddOrEditTaskDialog(),
+                              icon: const Icon(Icons.add_rounded, size: 18),
+                              label: const Text('Add Task for this Date'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryViolet,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       )
                     : ListView.builder(
                         physics: const BouncingScrollPhysics(),
-                        itemCount: _repository.tasks.length,
+                        itemCount: _tasksForSelectedDate.length,
                         itemBuilder: (context, index) {
-                          final task = _repository.tasks[index];
+                          final task = _tasksForSelectedDate[index];
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 10.0),
-                            child: _buildAgendaTile(
-                              title: task.title,
-                              time: task.time,
-                              accentColor: task.color,
-                            ),
+                            child: _buildAgendaTile(task),
                           );
                         },
                       ),
@@ -204,15 +303,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddOrEditTaskDialog(),
+        backgroundColor: AppColors.primaryViolet,
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+      ),
       bottomNavigationBar: _buildBottomNavigationBar(context),
     );
   }
 
-  Widget _buildAgendaTile({
-    required String title,
-    required String time,
-    required Color accentColor,
-  }) {
+  Widget _buildAgendaTile(TaskItem task) {
+    final Color accentColor = task.color;
+    final bool completed = task.completed;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
@@ -222,35 +325,212 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 18,
-            height: 18,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: accentColor, width: 2),
+          // Checkbox
+          GestureDetector(
+            onTap: () {
+              final updatedTask = task.copyWith(completed: !completed);
+              _repository.saveTask(updatedTask);
+            },
+            child: Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color: completed ? accentColor : Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: accentColor, width: 2),
+              ),
+              child: completed
+                  ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                  : null,
             ),
           ),
           const SizedBox(width: 14),
           Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textDark,
+            child: GestureDetector(
+              onTap: () => _showAddOrEditTaskDialog(task),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: completed ? AppColors.textDarkSecondary : AppColors.textDark,
+                      decoration: completed ? TextDecoration.lineThrough : TextDecoration.none,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    task.time,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textDarkSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          Text(
-            time,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textDarkSecondary,
-            ),
+          IconButton(
+            icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textDarkSecondary),
+            onPressed: () => _showAddOrEditTaskDialog(task),
+            tooltip: 'Edit Task',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
+            onPressed: () => _repository.deleteTask(task.id),
+            tooltip: 'Delete Task',
           ),
         ],
       ),
+    );
+  }
+
+  void _showAddOrEditTaskDialog([TaskItem? existingTask]) {
+    final titleController = TextEditingController(text: existingTask?.title ?? '');
+    final timeController = TextEditingController(text: existingTask?.time ?? '10:00 AM');
+    DateTime selectedDate = existingTask?.dueDate ?? _selectedDate;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final formattedDateStr =
+                '${selectedDate.day} ${_monthNames[selectedDate.month - 1]} ${selectedDate.year}';
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(existingTask == null ? 'Add Task for $formattedDateStr' : 'Edit Task'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    autofocus: true,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      filled: false,
+                      contentPadding: EdgeInsets.symmetric(vertical: 4),
+                      hintText: 'What needs to be done?',
+                      hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 16, fontWeight: FontWeight.normal),
+                    ),
+                  ),
+                  const Divider(color: AppColors.borderLight, height: 20),
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2035),
+                      );
+                      if (picked != null) {
+                        setDialogState(() {
+                          selectedDate = picked;
+                        });
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.primaryViolet),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Due Date',
+                                  style: TextStyle(fontSize: 11, color: AppColors.textDarkSecondary),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  formattedDateStr,
+                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textDark),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.edit_calendar_rounded, size: 18, color: AppColors.primaryViolet),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: timeController,
+                    style: const TextStyle(fontSize: 13, color: AppColors.textDark),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      filled: false,
+                      contentPadding: EdgeInsets.symmetric(vertical: 4),
+                      prefixIcon: Icon(Icons.access_time_rounded, size: 18, color: AppColors.primaryViolet),
+                      prefixIconConstraints: BoxConstraints(minWidth: 28, minHeight: 18),
+                      hintText: 'Time (e.g. 10:00 AM)',
+                      hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                if (existingTask != null)
+                  TextButton(
+                    onPressed: () {
+                      _repository.deleteTask(existingTask.id);
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryViolet,
+                  ),
+                  onPressed: () {
+                    final titleText = titleController.text.trim();
+                    final timeText = timeController.text.trim();
+                    if (titleText.isNotEmpty) {
+                      final taskId = existingTask?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+                      final task = TaskItem(
+                        id: taskId,
+                        title: titleText,
+                        time: timeText.isNotEmpty ? timeText : '10:00 AM',
+                        color: existingTask?.color ?? AppColors.primaryViolet,
+                        completed: existingTask?.completed ?? false,
+                        createdAt: existingTask?.createdAt ?? DateTime.now(),
+                        dueDate: selectedDate,
+                      );
+                      _repository.saveTask(task);
+                      setState(() {
+                        _selectedDate = selectedDate;
+                        _focusedDate = DateTime(selectedDate.year, selectedDate.month);
+                      });
+                    }
+                    Navigator.pop(context);
+                  },
+                  child: Text(existingTask == null ? 'Add' : 'Save', style: const TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -263,7 +543,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
       ),
       child: BottomNavigationBar(
-        currentIndex: 5,
+        currentIndex: 5, // Tasks index
         onTap: (index) {
           if (index == 0) {
             Navigator.pushReplacementNamed(context, AppRouter.home);

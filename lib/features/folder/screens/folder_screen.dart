@@ -43,12 +43,12 @@ class FoldersScreen extends StatefulWidget {
 class _FoldersScreenState extends State<FoldersScreen> {
   final VaultRepository _repository = VaultRepository.instance;
 
-  static const List<_FolderData> _folders = [
-    _FolderData('Personal', 24, AppColors.primaryPurple),
-    _FolderData('Work', 18, AppColors.info),
-    _FolderData('Study', 16, AppColors.warning),
-    _FolderData('Ideas', 12, AppColors.success),
-    _FolderData('Projects', 8, AppColors.error),
+  static const List<Map<String, dynamic>> _folderMetaData = [
+    {'name': 'Personal', 'tint': AppColors.primaryPurple},
+    {'name': 'Work', 'tint': AppColors.info},
+    {'name': 'Study', 'tint': AppColors.warning},
+    {'name': 'Ideas', 'tint': AppColors.success},
+    {'name': 'Projects', 'tint': AppColors.error},
   ];
 
   @override
@@ -67,9 +67,15 @@ class _FoldersScreenState extends State<FoldersScreen> {
     if (mounted) setState(() {});
   }
 
-  List<_FolderItem> get _projectItems {
+  int _getFolderCount(String folderName) {
+    final noteCount = _repository.notes.where((n) => n.folderName == folderName).length;
+    final taskCount = _repository.tasks.where((t) => t.folderName == folderName).length;
+    return noteCount + taskCount;
+  }
+
+  List<_FolderItem> _getItemsForFolder(String folderName) {
     final items = <_FolderItem>[];
-    for (final note in _repository.notes) {
+    for (final note in _repository.notes.where((n) => n.folderName == folderName)) {
       items.add(
         _FolderItem(
           title: note.title,
@@ -81,7 +87,7 @@ class _FoldersScreenState extends State<FoldersScreen> {
         ),
       );
     }
-    for (final task in _repository.tasks) {
+    for (final task in _repository.tasks.where((t) => t.folderName == folderName)) {
       items.add(
         _FolderItem(
           title: task.title,
@@ -190,7 +196,7 @@ class _FoldersScreenState extends State<FoldersScreen> {
       ),
       body: _openFolder == null
           ? _buildFolderList(surface, border, textSecondary, theme)
-          : _buildFolderContents(surface, border, textSecondary, theme),
+          : _buildFolderContents(_openFolder!, surface, border, textSecondary, theme),
     );
   }
 
@@ -199,10 +205,13 @@ class _FoldersScreenState extends State<FoldersScreen> {
       Color surface, Color border, Color textSecondary, ThemeData theme) {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 80),
-      itemCount: _folders.length,
+      itemCount: _folderMetaData.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final folder = _folders[index];
+        final meta = _folderMetaData[index];
+        final folderName = meta['name'] as String;
+        final count = _getFolderCount(folderName);
+        final folder = _FolderData(folderName, count, meta['tint'] as Color);
         return _FolderTile(
           folder: folder,
           surface: surface,
@@ -215,11 +224,33 @@ class _FoldersScreenState extends State<FoldersScreen> {
     );
   }
 
-  // ── Folder contents (Notes / Tasks / Files) ───────────────────────────────
+  // ── Folder contents (Notes / Tasks) ───────────────────────────────
   Widget _buildFolderContents(
-      Color surface, Color border, Color textSecondary, ThemeData theme) {
+      String folderName, Color surface, Color border, Color textSecondary, ThemeData theme) {
+    final folderItems = _getItemsForFolder(folderName);
+    if (folderItems.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.folder_open_rounded, size: 48, color: AppColors.textDarkSecondary),
+            const SizedBox(height: 12),
+            Text(
+              'No items in "$folderName"',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Long press any note or task to move it here!',
+              style: TextStyle(fontSize: 13, color: AppColors.textDarkSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+
     final grouped = <String, List<_FolderItem>>{};
-    for (final item in _projectItems) {
+    for (final item in folderItems) {
       grouped.putIfAbsent(item.section, () => []).add(item);
     }
 

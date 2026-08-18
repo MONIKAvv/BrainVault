@@ -317,15 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
             return Padding(
               padding: const EdgeInsets.only(bottom: 10.0),
               child: _buildNoteTile(
-                iconBg: note.iconBg,
-                iconColor: note.iconColor,
-                customLetter: note.title.isNotEmpty
-                    ? note.title[0].toUpperCase()
-                    : 'N',
-                title: note.title,
-                subtitle: note.subtitle.isNotEmpty
-                    ? note.subtitle
-                    : _formatDate(note.createdAt),
+                note: note,
                 onTap: () => Navigator.pushNamed(
                   context,
                   AppRouter.noteEditor,
@@ -339,14 +331,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildNoteTile({
-    required Color iconBg,
-    required Color iconColor,
-    IconData? icon,
-    String? customLetter,
-    required String title,
-    required String subtitle,
+    required NoteItem note,
     required VoidCallback onTap,
   }) {
+    final customLetter = note.title.isNotEmpty ? note.title[0].toUpperCase() : 'N';
+    final subtitle = note.subtitle.isNotEmpty ? note.subtitle : _formatDate(note.createdAt);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -363,20 +353,18 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: iconBg,
+                color: note.iconBg,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
-                child: customLetter != null
-                    ? Text(
-                        customLetter,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: iconColor,
-                        ),
-                      )
-                    : Icon(icon, color: iconColor, size: 22),
+                child: Text(
+                  customLetter,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: note.iconColor,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 14),
@@ -385,7 +373,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    note.title,
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -404,12 +392,22 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             IconButton(
-              icon: const Icon(
-                Icons.bookmark_outline_rounded,
-                color: AppColors.textDarkSecondary,
+              icon: Icon(
+                note.isPinned ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
+                color: note.isPinned ? AppColors.primaryViolet : AppColors.textDarkSecondary,
                 size: 20,
               ),
-              onPressed: () {},
+              onPressed: () {
+                _repository.toggleNotePin(note.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      note.isPinned ? 'Unpinned note' : 'Moved note to Pinned',
+                    ),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -569,63 +567,136 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showEditTaskDialog(TaskItem task) {
     final titleController = TextEditingController(text: task.title);
-    final timeController = TextEditingController(text: task.time);
+    DateTime selectedDate = task.dueDate;
+    String selectedTimeDisplay = task.time;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Edit Task'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              autofocus: true,
-              decoration: const InputDecoration(labelText: 'Task Title'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: timeController,
-              decoration: const InputDecoration(labelText: 'Time / Date'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              _repository.deleteTask(task.id);
-              Navigator.pop(context);
-            },
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.redAccent),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryViolet,
-            ),
-            onPressed: () {
-              final titleText = titleController.text.trim();
-              final timeText = timeController.text.trim();
-              if (titleText.isNotEmpty) {
-                final updatedTask = task.copyWith(
-                  title: titleText,
-                  time: timeText.isNotEmpty ? timeText : task.time,
-                );
-                _repository.saveTask(updatedTask);
-              }
-              Navigator.pop(context);
-            },
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            final formattedDateStr = '${selectedDate.day} ${monthNames[selectedDate.month - 1]} ${selectedDate.year}';
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Edit Task'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    autofocus: true,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      filled: false,
+                      contentPadding: EdgeInsets.symmetric(vertical: 4),
+                      hintText: 'What needs to be done?',
+                      hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 16, fontWeight: FontWeight.normal),
+                    ),
+                  ),
+                  const Divider(color: AppColors.borderLight, height: 20),
+                  InkWell(
+                    onTap: () async {
+                      final pickedDate = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2035),
+                      );
+                      if (pickedDate != null) {
+                        final pickedTime = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.now(),
+                        );
+                        setDialogState(() {
+                          selectedDate = pickedDate;
+                          final dateStr = '${pickedDate.day} ${monthNames[pickedDate.month - 1]} ${pickedDate.year}';
+                          if (pickedTime != null) {
+                            final h = pickedTime.hourOfPeriod == 0 ? 12 : pickedTime.hourOfPeriod;
+                            final ampm = pickedTime.period == DayPeriod.am ? 'AM' : 'PM';
+                            final m = pickedTime.minute.toString().padLeft(2, '0');
+                            selectedTimeDisplay = '$dateStr · $h:$m $ampm';
+                          } else {
+                            selectedTimeDisplay = dateStr;
+                          }
+                        });
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.primaryViolet),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Due Date & Time',
+                                  style: TextStyle(fontSize: 11, color: AppColors.textDarkSecondary),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  selectedTimeDisplay.isNotEmpty ? selectedTimeDisplay : formattedDateStr,
+                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textDark),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.edit_calendar_rounded, size: 18, color: AppColors.primaryViolet),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    _repository.deleteTask(task.id);
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(color: Colors.redAccent),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryViolet,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    final titleText = titleController.text.trim();
+                    if (titleText.isNotEmpty) {
+                      final updatedTask = task.copyWith(
+                        title: titleText,
+                        time: selectedTimeDisplay,
+                        dueDate: selectedDate,
+                      );
+                      _repository.saveTask(updatedTask);
+                    }
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Save', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

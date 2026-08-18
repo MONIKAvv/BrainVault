@@ -13,7 +13,7 @@ class TasksScreen extends StatefulWidget {
 
 class _TasksScreenState extends State<TasksScreen> {
   int _selectedFilterIndex = 0;
-  final List<String> _filters = ['All', 'Today', 'Upcoming', 'Done'];
+  final List<String> _filters = ['All', 'Pinned', 'Today', 'Upcoming', 'Done'];
   final VaultRepository _repository = VaultRepository.instance;
 
   @override
@@ -32,21 +32,105 @@ class _TasksScreenState extends State<TasksScreen> {
     if (mounted) setState(() {});
   }
 
+  void _showTaskFolderPicker(TaskItem task) {
+    final folders = ['Personal', 'Work', 'Study', 'Ideas', 'Projects'];
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Move "${task.title}" to Folder',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...folders.map((folder) {
+                final isCurrent = task.folderName == folder;
+                return ListTile(
+                  leading: Icon(
+                    Icons.folder_outlined,
+                    color: isCurrent ? AppColors.primaryViolet : AppColors.textDarkSecondary,
+                  ),
+                  title: Text(
+                    folder,
+                    style: TextStyle(
+                      fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                      color: isCurrent ? AppColors.primaryViolet : AppColors.textDark,
+                    ),
+                  ),
+                  trailing: isCurrent ? const Icon(Icons.check_rounded, color: AppColors.primaryViolet) : null,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _repository.moveTaskToFolder(task.id, folder);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Moved task to "$folder"'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                );
+              }),
+              if (task.folderName != null) ...[
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.folder_off_outlined, color: AppColors.error),
+                  title: const Text('Remove from Folder', style: TextStyle(color: AppColors.error)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _repository.moveTaskToFolder(task.id, null);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Removed task from folder'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+              ]
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   List<TaskItem> get _filteredTasks {
     final allTasks = _repository.tasks;
     final now = DateTime.now();
 
     switch (_selectedFilterIndex) {
-      case 1: // Today
+      case 1: // Pinned
+        return allTasks.where((t) => t.isPinned).toList();
+      case 2: // Today
         return allTasks.where((t) {
-          final isSameDay = t.createdAt.year == now.year &&
-              t.createdAt.month == now.month &&
-              t.createdAt.day == now.day;
-          return isSameDay || t.time.toLowerCase().contains('today') || t.time.toLowerCase().contains('now');
+          final isSameDay = t.dueDate.year == now.year &&
+              t.dueDate.month == now.month &&
+              t.dueDate.day == now.day;
+          return isSameDay;
         }).toList();
-      case 2: // Upcoming
+      case 3: // Upcoming
         return allTasks.where((t) => !t.completed).toList();
-      case 3: // Done
+      case 4: // Done
         return allTasks.where((t) => t.completed).toList();
       case 0: // All
       default:
@@ -128,25 +212,29 @@ class _TasksScreenState extends State<TasksScreen> {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
+        children: [
           Icon(
-            Icons.check_circle_outline_rounded,
+            _selectedFilterIndex == 1
+                ? Icons.bookmark_border_rounded
+                : Icons.check_circle_outline_rounded,
             size: 48,
             color: AppColors.textDarkSecondary,
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Text(
-            'No tasks found',
-            style: TextStyle(
+            _selectedFilterIndex == 1 ? 'No pinned tasks' : 'No tasks found',
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AppColors.textDark,
             ),
           ),
-          SizedBox(height: 6),
+          const SizedBox(height: 6),
           Text(
-            'Tap + to add a new task!',
-            style: TextStyle(
+            _selectedFilterIndex == 1
+                ? 'Click the bookmark icon on any task to pin it!'
+                : 'Tap + to add a new task for any date!',
+            style: const TextStyle(
               fontSize: 13,
               color: AppColors.textDarkSecondary,
             ),
@@ -203,84 +291,138 @@ class _TasksScreenState extends State<TasksScreen> {
   Widget _buildTaskTile(TaskItem task) {
     final Color accentColor = task.color;
     final bool completed = task.completed;
+    final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final dateDisplay = '${task.dueDate.day} ${monthNames[task.dueDate.month - 1]} ${task.dueDate.year}';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10.0),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderLight),
-        ),
-        child: Row(
-          children: [
-            // Custom Checkbox
-            GestureDetector(
-              onTap: () {
-                final updatedTask = task.copyWith(completed: !completed);
-                _repository.saveTask(updatedTask);
-              },
-              child: Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: completed ? accentColor : Colors.white,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: accentColor,
-                    width: 2,
+      child: GestureDetector(
+        onLongPress: () => _showTaskFolderPicker(task),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Row(
+            children: [
+              // Custom Checkbox
+              GestureDetector(
+                onTap: () {
+                  final updatedTask = task.copyWith(completed: !completed);
+                  _repository.saveTask(updatedTask);
+                },
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: completed ? accentColor : Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: accentColor,
+                      width: 2,
+                    ),
+                  ),
+                  child: completed
+                      ? const Icon(Icons.check_rounded,
+                          size: 14, color: Colors.white)
+                      : null,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _showAddOrEditTaskDialog(task),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              task.title,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: completed
+                                    ? AppColors.textDarkSecondary
+                                    : AppColors.textDark,
+                                decoration: completed
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
+                              ),
+                            ),
+                          ),
+                          if (task.folderName != null) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryViolet.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                task.folderName!,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primaryViolet,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today_rounded, size: 12, color: AppColors.textDarkSecondary),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$dateDisplay · ${task.time}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textDarkSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                child: completed
-                    ? const Icon(Icons.check_rounded,
-                        size: 14, color: Colors.white)
-                    : null,
               ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: GestureDetector(
-                onTap: () => _showAddOrEditTaskDialog(task),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      task.title,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: completed
-                            ? AppColors.textDarkSecondary
-                            : AppColors.textDark,
-                        decoration: completed
-                            ? TextDecoration.lineThrough
-                            : TextDecoration.none,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      task.time,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textDarkSecondary,
-                      ),
-                    ),
-                  ],
+              IconButton(
+                icon: Icon(
+                  task.isPinned ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
+                  size: 18,
+                  color: task.isPinned ? AppColors.primaryViolet : AppColors.textDarkSecondary,
                 ),
+                onPressed: () {
+                  _repository.toggleTaskPin(task.id);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        task.isPinned ? 'Unpinned task' : 'Moved task to Pinned',
+                      ),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
+                tooltip: task.isPinned ? 'Unpin Task' : 'Pin Task',
               ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textDarkSecondary),
-              onPressed: () => _showAddOrEditTaskDialog(task),
-              tooltip: 'Edit Task',
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
-              onPressed: () => _showDeleteConfirmation(task),
-              tooltip: 'Delete Task',
-            ),
-          ],
+              IconButton(
+                icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textDarkSecondary),
+                onPressed: () => _showAddOrEditTaskDialog(task),
+                tooltip: 'Edit Task',
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
+                onPressed: () => _showDeleteConfirmation(task),
+                tooltip: 'Delete Task',
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -313,74 +455,146 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  void _showAddOrEditTaskDialog([TaskItem? existingTask]) {
+  void _showAddOrEditTaskDialog([TaskItem? existingTask, DateTime? defaultDate]) {
     final titleController = TextEditingController(text: existingTask?.title ?? '');
-    final timeController = TextEditingController(text: existingTask?.time ?? 'Today, 10:00 AM');
+    final timeController = TextEditingController(text: existingTask?.time ?? '10:00 AM');
+    DateTime selectedDate = existingTask?.dueDate ?? defaultDate ?? DateTime.now();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(existingTask == null ? 'Add New Task' : 'Edit Task'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Task Title',
-                hintText: 'Enter task name',
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            final formattedDateStr = '${selectedDate.day} ${monthNames[selectedDate.month - 1]} ${selectedDate.year}';
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(existingTask == null ? 'Add New Task' : 'Edit Task'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    autofocus: true,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      filled: false,
+                      contentPadding: EdgeInsets.symmetric(vertical: 4),
+                      hintText: 'What needs to be done?',
+                      hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 16, fontWeight: FontWeight.normal),
+                    ),
+                  ),
+                  const Divider(color: AppColors.borderLight, height: 20),
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2035),
+                      );
+                      if (picked != null) {
+                        setDialogState(() {
+                          selectedDate = picked;
+                        });
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.primaryViolet),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Due Date',
+                                  style: TextStyle(fontSize: 11, color: AppColors.textDarkSecondary),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  formattedDateStr,
+                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textDark),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.edit_calendar_rounded, size: 18, color: AppColors.primaryViolet),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: timeController,
+                    style: const TextStyle(fontSize: 13, color: AppColors.textDark),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      filled: false,
+                      contentPadding: EdgeInsets.symmetric(vertical: 4),
+                      prefixIcon: Icon(Icons.access_time_rounded, size: 18, color: AppColors.primaryViolet),
+                      prefixIconConstraints: BoxConstraints(minWidth: 28, minHeight: 18),
+                      hintText: 'Time (e.g. 10:00 AM)',
+                      hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: timeController,
-              decoration: const InputDecoration(
-                labelText: 'Time / Date',
-                hintText: 'e.g. Today, 2:00 PM',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          if (existingTask != null)
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _showDeleteConfirmation(existingTask);
-              },
-              child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
-            ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryViolet,
-            ),
-            onPressed: () {
-              final titleText = titleController.text.trim();
-              final timeText = timeController.text.trim();
-              if (titleText.isNotEmpty) {
-                final taskId = existingTask?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
-                final task = TaskItem(
-                  id: taskId,
-                  title: titleText,
-                  time: timeText.isNotEmpty ? timeText : 'Just now',
-                  color: existingTask?.color ?? AppColors.primaryViolet,
-                  completed: existingTask?.completed ?? false,
-                  createdAt: existingTask?.createdAt ?? DateTime.now(),
-                );
-                _repository.saveTask(task);
-              }
-              Navigator.pop(context);
-            },
-            child: Text(existingTask == null ? 'Add' : 'Save', style: const TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+              actions: [
+                if (existingTask != null)
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showDeleteConfirmation(existingTask);
+                    },
+                    child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryViolet,
+                  ),
+                  onPressed: () {
+                    final titleText = titleController.text.trim();
+                    final timeText = timeController.text.trim();
+                    if (titleText.isNotEmpty) {
+                      final taskId = existingTask?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+                      final task = TaskItem(
+                        id: taskId,
+                        title: titleText,
+                        time: timeText.isNotEmpty ? timeText : '10:00 AM',
+                        color: existingTask?.color ?? AppColors.primaryViolet,
+                        completed: existingTask?.completed ?? false,
+                        createdAt: existingTask?.createdAt ?? DateTime.now(),
+                        dueDate: selectedDate,
+                      );
+                      _repository.saveTask(task);
+                    }
+                    Navigator.pop(context);
+                  },
+                  child: Text(existingTask == null ? 'Add' : 'Save', style: const TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

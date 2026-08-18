@@ -352,6 +352,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       ),
                       decoration: const InputDecoration(
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        filled: false,
+                        contentPadding: EdgeInsets.zero,
                         hintText: 'Note Title...',
                         hintStyle: TextStyle(color: Color(0xFF9CA3AF)),
                       ),
@@ -435,15 +441,25 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       const SizedBox(height: 12),
                     ],
 
-                    // Note Main Paragraph Body
-                    TextField(
-                      controller: _bodyController,
-                      maxLines: null,
-                      style: _bodyTextStyle,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        hintText: 'Start writing your note...',
-                        hintStyle: TextStyle(color: Color(0xFF9CA3AF)),
+                    // Note Main Paragraph Body (Infinite vertical space, borderless)
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 450),
+                      child: TextField(
+                        controller: _bodyController,
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
+                        style: _bodyTextStyle,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          filled: false,
+                          contentPadding: EdgeInsets.zero,
+                          hintText: 'Start writing your note...',
+                          hintStyle: TextStyle(color: Color(0xFF9CA3AF)),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),

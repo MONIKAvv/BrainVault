@@ -191,6 +191,47 @@ class _RemainderScreenState extends State<RemainderScreen> {
                   ),
                   const SizedBox(height: 16),
 
+                  // Date picker row
+                  InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2035),
+                      );
+                      if (picked != null) {
+                        setSheetState(() {});
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: border),
+                        borderRadius: BorderRadius.circular(14),
+                        color: surface,
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_month_rounded,
+                              color: AppColors.primaryPurple),
+                          const SizedBox(width: 12),
+                          Text('Select Date',
+                              style: AppTextStyles.subtitle(
+                                  color: textPrimary)),
+                          const Spacer(),
+                          Icon(Icons.chevron_right,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
                   // Repeat selector
                   Container(
                     padding: const EdgeInsets.symmetric(
