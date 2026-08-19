@@ -366,7 +366,60 @@ class TaskItem {
   }
 }
 
-/// Central Repository for user notes, mind maps, summaries, and tasks
+class FolderModel {
+  final String id;
+  final String name;
+  final Color color;
+  final DateTime createdAt;
+
+  FolderModel({
+    required this.id,
+    required this.name,
+    required this.color,
+    required this.createdAt,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'colorInt': color.toARGB32(),
+      'createdAt': Timestamp.fromDate(createdAt),
+    };
+  }
+
+  factory FolderModel.fromMap(Map<String, dynamic> map, {String fallbackId = ''}) {
+    DateTime parseDate(dynamic val) {
+      if (val is Timestamp) return val.toDate();
+      if (val is String) return DateTime.tryParse(val) ?? DateTime.now();
+      return DateTime.now();
+    }
+
+    final int colorInt = map['colorInt'] is int ? map['colorInt'] : 0xFF7C3AED;
+    return FolderModel(
+      id: map['id'] ?? fallbackId,
+      name: map['name'] ?? 'Untitled Folder',
+      color: Color(colorInt),
+      createdAt: parseDate(map['createdAt']),
+    );
+  }
+
+  FolderModel copyWith({
+    String? id,
+    String? name,
+    Color? color,
+    DateTime? createdAt,
+  }) {
+    return FolderModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      color: color ?? this.color,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+}
+
+/// Central Repository for user notes, mind maps, summaries, tasks, and folders
 /// Automatically syncs with Cloud Firestore top-level collections.
 class VaultRepository extends ChangeNotifier {
   static final VaultRepository instance = VaultRepository._internal();
@@ -381,11 +434,13 @@ class VaultRepository extends ChangeNotifier {
   final List<MindMapItem> _mindMaps = [];
   final List<SummaryItem> _summaries = [];
   final List<TaskItem> _tasks = [];
+  final List<FolderModel> _folders = [];
 
   List<NoteItem> get notes => List.unmodifiable(_notes);
   List<MindMapItem> get mindMaps => List.unmodifiable(_mindMaps);
   List<SummaryItem> get summaries => List.unmodifiable(_summaries);
   List<TaskItem> get tasks => List.unmodifiable(_tasks);
+  List<FolderModel> get folders => List.unmodifiable(_folders);
 
   void _listenToFirestore() {
     // Listen to real-time updates from Cloud Firestore
@@ -410,6 +465,12 @@ class VaultRepository extends ChangeNotifier {
     _firestoreService.streamTasks().listen((taskMaps) {
       _tasks.clear();
       _tasks.addAll(taskMaps.map((map) => TaskItem.fromMap(map)));
+      notifyListeners();
+    }, onError: (_) {});
+
+    _firestoreService.streamFolders().listen((folderMaps) {
+      _folders.clear();
+      _folders.addAll(folderMaps.map((map) => FolderModel.fromMap(map)));
       notifyListeners();
     }, onError: (_) {});
   }
@@ -505,5 +566,32 @@ class VaultRepository extends ChangeNotifier {
     _tasks.removeWhere((item) => item.id == taskId);
     notifyListeners();
     _firestoreService.deleteTask(taskId);
+  }
+
+  void saveFolder(FolderModel folder) {
+    final existingIndex = _folders.indexWhere((f) => f.id == folder.id);
+    if (existingIndex >= 0) {
+      _folders[existingIndex] = folder;
+    } else {
+      _folders.insert(0, folder);
+    }
+    notifyListeners();
+    _firestoreService.saveFolder(folder.toMap());
+  }
+
+  void deleteFolder(String folderId, {String? folderName}) {
+    final name = folderName ?? _folders.firstWhere((f) => f.id == folderId, orElse: () => FolderModel(id: '', name: '', color: Colors.transparent, createdAt: DateTime.now())).name;
+    _folders.removeWhere((item) => item.id == folderId);
+    if (name.isNotEmpty) {
+      // Unassign notes and tasks from deleted folder
+      for (final note in _notes.where((n) => n.folderName == name)) {
+        moveNoteToFolder(note.id, null);
+      }
+      for (final task in _tasks.where((t) => t.folderName == name)) {
+        moveTaskToFolder(task.id, null);
+      }
+    }
+    notifyListeners();
+    _firestoreService.deleteFolder(folderId);
   }
 }

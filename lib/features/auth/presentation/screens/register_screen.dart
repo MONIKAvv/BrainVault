@@ -57,10 +57,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     try {
-      await _authService.register(email: email, password: password);
+      final userCred = await _authService.register(email: email, password: password);
+      await userCred.user?.updateDisplayName(name);
+      await FirebaseAuth.instance.currentUser?.reload();
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Registration Successfull")));
+      ).showSnackBar(const SnackBar(content: Text("Registration Successful")));
       AppRouter.navigateToHome(context);
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

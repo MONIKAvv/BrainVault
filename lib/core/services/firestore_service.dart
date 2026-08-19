@@ -237,8 +237,53 @@ class FirestoreService {
     try {
       await _ensureAuth();
       await _remindersCollection.doc(reminderId).delete();
+      debugPrint('FirestoreService: Reminder $reminderId deleted from /reminders collection!');
     } catch (e) {
       debugPrint('FirestoreService Error deleting reminder: $e');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // FOLDERS COLLECTION: /folders
+  // ---------------------------------------------------------------------------
+
+  CollectionReference<Map<String, dynamic>> get _foldersCollection {
+    return _db.collection('folders');
+  }
+
+  Stream<List<Map<String, dynamic>>> streamFolders() {
+    _ensureAuth();
+    return _foldersCollection
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+  }
+
+  Future<void> saveFolder(Map<String, dynamic> folderData) async {
+    try {
+      await _ensureAuth();
+      final String docId = folderData['id'] ?? _foldersCollection.doc().id;
+      final dataToSave = Map<String, dynamic>.from(folderData);
+      dataToSave['id'] = docId;
+      dataToSave['userId'] = _currentUserId;
+      if (!dataToSave.containsKey('createdAt') || dataToSave['createdAt'] == null) {
+        dataToSave['createdAt'] = FieldValue.serverTimestamp();
+      }
+      dataToSave['updatedAt'] = FieldValue.serverTimestamp();
+
+      await _foldersCollection.doc(docId).set(dataToSave, SetOptions(merge: true));
+      debugPrint('FirestoreService: Folder $docId saved successfully to /folders collection!');
+    } catch (e) {
+      debugPrint('FirestoreService Error saving folder: $e');
+    }
+  }
+
+  Future<void> deleteFolder(String folderId) async {
+    try {
+      await _ensureAuth();
+      await _foldersCollection.doc(folderId).delete();
+      debugPrint('FirestoreService: Folder $folderId deleted from /folders collection!');
+    } catch (e) {
+      debugPrint('FirestoreService Error deleting folder: $e');
     }
   }
 }

@@ -2,6 +2,7 @@ import 'package:brainvault/app/theme/app_colors.dart';
 import 'package:brainvault/app/theme/app_text_styles.dart';
 import 'package:brainvault/core/services/auth_services.dart';
 import 'package:brainvault/shared/theme_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 // ── Settings item model ───────────────────────────────────────────────────────
@@ -238,6 +239,13 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final displayName = user?.displayName?.isNotEmpty == true
+        ? user!.displayName!
+        : (user?.email?.split('@').first ?? 'User');
+    final email = user?.email ?? 'No email';
+    final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -258,10 +266,10 @@ class _ProfileCard extends StatelessWidget {
                 width: 2,
               ),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'A',
-                style: TextStyle(
+                initial,
+                style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primaryPurple,
@@ -275,14 +283,14 @@ class _ProfileCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Aman',
+                  displayName,
                   style: AppTextStyles.subtitle(
                     color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'aman@brainvault.app',
+                  email,
                   style: AppTextStyles.caption(color: textSecondary),
                 ),
               ],
@@ -373,8 +381,19 @@ class _AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<_AccountScreen> {
-  final _nameCtrl = TextEditingController(text: 'Aman');
-  final _emailCtrl = TextEditingController(text: 'aman@brainvault.app');
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _emailCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    final displayName = user?.displayName?.isNotEmpty == true
+        ? user!.displayName!
+        : (user?.email?.split('@').first ?? 'User');
+    _nameCtrl = TextEditingController(text: displayName);
+    _emailCtrl = TextEditingController(text: user?.email ?? '');
+  }
 
   @override
   void dispose() {
@@ -391,6 +410,7 @@ class _AccountScreenState extends State<_AccountScreen> {
     final textSecondary = isDark
         ? AppColors.darkTextSecondary
         : AppColors.lightTextSecondary;
+    final initial = _nameCtrl.text.isNotEmpty ? _nameCtrl.text[0].toUpperCase() : 'U';
 
     return Scaffold(
       backgroundColor: bg,
@@ -424,10 +444,10 @@ class _AccountScreenState extends State<_AccountScreen> {
                         width: 2.5,
                       ),
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Text(
-                        'A',
-                        style: TextStyle(
+                        initial,
+                        style: const TextStyle(
                           fontSize: 34,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primaryPurple,
@@ -470,6 +490,7 @@ class _AccountScreenState extends State<_AccountScreen> {
             const SizedBox(height: 6),
             TextField(
               controller: _emailCtrl,
+              readOnly: true,
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(hintText: 'Your email'),
             ),
@@ -479,6 +500,7 @@ class _AccountScreenState extends State<_AccountScreen> {
             const SizedBox(height: 6),
             TextField(
               obscureText: true,
+              readOnly: true,
               decoration: const InputDecoration(hintText: '••••••••'),
             ),
             const SizedBox(height: 32),
@@ -494,11 +516,17 @@ class _AccountScreenState extends State<_AccountScreen> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Profile updated!')),
-                  );
-                  Navigator.pop(context);
+                onPressed: () async {
+                  final newName = _nameCtrl.text.trim();
+                  if (newName.isNotEmpty) {
+                    await FirebaseAuth.instance.currentUser?.updateDisplayName(newName);
+                    await FirebaseAuth.instance.currentUser?.reload();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Profile updated!')),
+                    );
+                    Navigator.pop(context);
+                  }
                 },
                 child: Text('Save Changes', style: AppTextStyles.button()),
               ),

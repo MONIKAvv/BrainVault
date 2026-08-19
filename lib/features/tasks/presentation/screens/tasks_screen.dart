@@ -33,7 +33,7 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 
   void _showTaskFolderPicker(TaskItem task) {
-    final folders = ['Personal', 'Work', 'Study', 'Ideas', 'Projects'];
+    final folders = _repository.folders;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -63,33 +63,55 @@ class _TasksScreenState extends State<TasksScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              ...folders.map((folder) {
-                final isCurrent = task.folderName == folder;
-                return ListTile(
-                  leading: Icon(
-                    Icons.folder_outlined,
-                    color: isCurrent ? AppColors.primaryViolet : AppColors.textDarkSecondary,
-                  ),
-                  title: Text(
-                    folder,
-                    style: TextStyle(
-                      fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                      color: isCurrent ? AppColors.primaryViolet : AppColors.textDark,
-                    ),
-                  ),
-                  trailing: isCurrent ? const Icon(Icons.check_rounded, color: AppColors.primaryViolet) : null,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _repository.moveTaskToFolder(task.id, folder);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Moved task to "$folder"'),
-                        duration: const Duration(seconds: 2),
+              if (folders.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'No folders yet.',
+                        style: TextStyle(color: AppColors.textDarkSecondary),
                       ),
-                    );
-                  },
-                );
-              }),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          Navigator.pushNamed(context, AppRouter.folder);
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Manage & Create Folders'),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...folders.map((folder) {
+                  final isCurrent = task.folderName == folder.name;
+                  return ListTile(
+                    leading: Icon(
+                      Icons.folder_rounded,
+                      color: folder.color,
+                    ),
+                    title: Text(
+                      folder.name,
+                      style: TextStyle(
+                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                        color: isCurrent ? AppColors.primaryViolet : AppColors.textDark,
+                      ),
+                    ),
+                    trailing: isCurrent ? const Icon(Icons.check_rounded, color: AppColors.primaryViolet) : null,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _repository.moveTaskToFolder(task.id, folder.name);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Moved task to "${folder.name}"'),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  );
+                }),
               if (task.folderName != null) ...[
                 const Divider(),
                 ListTile(

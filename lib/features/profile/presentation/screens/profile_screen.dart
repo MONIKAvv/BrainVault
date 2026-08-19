@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -12,6 +13,26 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isDarkMode = false;
+
+  String _getUserDisplayName() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return 'User';
+    if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
+      return user.displayName!.trim();
+    }
+    if (user.email != null && user.email!.contains('@')) {
+      final prefix = user.email!.split('@').first;
+      if (prefix.isNotEmpty) {
+        return prefix[0].toUpperCase() + prefix.substring(1);
+      }
+    }
+    return 'User';
+  }
+
+  String _getUserEmail() {
+    final user = FirebaseAuth.instance.currentUser;
+    return user?.email ?? 'No email';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,18 +152,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 12),
 
               // User Name & Email
-              const Text(
-                'Aman Verma',
-                style: TextStyle(
+              Text(
+                _getUserDisplayName(),
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
               const SizedBox(height: 2),
-              const Text(
-                'aman.verma@gmail.com',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              Text(
+                _getUserEmail(),
+                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
               ),
             ],
           ),

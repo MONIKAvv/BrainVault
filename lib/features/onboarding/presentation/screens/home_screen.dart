@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -29,6 +30,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onRepositoryChanged() {
     if (mounted) setState(() {});
+  }
+
+  String _getUserDisplayName() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return 'User';
+    if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
+      return user.displayName!.trim();
+    }
+    if (user.email != null && user.email!.contains('@')) {
+      final prefix = user.email!.split('@').first;
+      if (prefix.isNotEmpty) {
+        return prefix[0].toUpperCase() + prefix.substring(1);
+      }
+    }
+    return 'User';
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning,';
+    if (hour < 17) return 'Good Afternoon,';
+    return 'Good Evening,';
   }
 
   @override
@@ -70,34 +93,36 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Header Widget
   Widget _buildHeader() {
+    final userName = _getUserDisplayName();
+    final greeting = _getGreeting();
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text(
-              'Good Morning,',
-              style: TextStyle(
+              greeting,
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: AppColors.textDarkSecondary,
               ),
             ),
-            SizedBox(height: 2),
+            const SizedBox(height: 2),
             Row(
               children: [
                 Text(
-                  'Aman',
-                  style: TextStyle(
+                  userName,
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textDark,
                   ),
                 ),
-                SizedBox(width: 6),
-                Text('👋', style: TextStyle(fontSize: 22)),
+                const SizedBox(width: 6),
+                const Text('👋', style: TextStyle(fontSize: 22)),
               ],
             ),
           ],

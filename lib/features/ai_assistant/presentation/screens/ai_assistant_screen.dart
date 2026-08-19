@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -24,13 +25,23 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   String _lastPrompt = '';
   bool _isLoading = false;
 
-  final List<Map<String, dynamic>> _messages = [
-    {
-      'isUser': false,
-      'text':
-          'Hello Aman! 👋\nI am Brain AI powered by Google Gemini.\nAsk me any question or select Note, Mind Map, or Summary above to generate insights!',
-    },
-  ];
+  late final List<Map<String, dynamic>> _messages;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    final displayName = user?.displayName?.isNotEmpty == true
+        ? user!.displayName!
+        : (user?.email?.split('@').first ?? 'there');
+    _messages = [
+      {
+        'isUser': false,
+        'text':
+            'Hello $displayName! 👋\nI am Brain AI powered by Google Gemini.\nAsk me any question or select Note, Mind Map, or Summary above to generate insights!',
+      },
+    ];
+  }
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
