@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/repositories/vault_repository.dart';
+import '../../../../core/services/streak_service.dart';
 
 /// Screen #14: Profile Screen ("Profile")
 class ProfileScreen extends StatefulWidget {
@@ -12,7 +14,37 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _isDarkMode = false;
+  final VaultRepository _repository = VaultRepository.instance;
+  int _dayStreak = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _repository.addListener(_onRepositoryChanged);
+    _loadStreak();
+  }
+
+  @override
+  void dispose() {
+    _repository.removeListener(_onRepositoryChanged);
+    super.dispose();
+  }
+
+  void _onRepositoryChanged() {
+    if (mounted) {
+      _loadStreak();
+      setState(() {});
+    }
+  }
+
+  Future<void> _loadStreak() async {
+    final streak = await StreakService.calculateStreak(_repository);
+    if (mounted) {
+      setState(() {
+        _dayStreak = streak;
+      });
+    }
+  }
 
   String _getUserDisplayName() {
     final user = FirebaseAuth.instance.currentUser;
@@ -64,8 +96,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Navigator.pushNamed(context, AppRouter.setting);
                       },
                     ),
-                    const SizedBox(height: 10),
-                    _buildDarkModeTile(),
                     const SizedBox(height: 10),
                     _buildSettingTile(
                       icon: Icons.cloud_upload_outlined,
@@ -190,11 +220,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStatItem('128', 'Notes'),
+                _buildStatItem('${_repository.notes.length}', 'Notes'),
                 Container(height: 28, width: 1, color: AppColors.borderLight),
-                _buildStatItem('56', 'Tasks'),
+                _buildStatItem('${_repository.tasks.length}', 'Tasks'),
                 Container(height: 28, width: 1, color: AppColors.borderLight),
-                _buildStatItem('24', 'Days Streak'),
+                _buildStatItem('$_dayStreak', 'Days Streak'),
               ],
             ),
           ),
@@ -254,40 +284,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           size: 22,
         ),
         onTap: onTap,
-      ),
-    );
-  }
-
-  Widget _buildDarkModeTile() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: ListTile(
-        leading: const Icon(
-          Icons.dark_mode_outlined,
-          color: AppColors.textDark,
-          size: 22,
-        ),
-        title: const Text(
-          'Dark Mode',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textDark,
-          ),
-        ),
-        trailing: Switch(
-          value: _isDarkMode,
-          activeThumbColor: AppColors.primaryViolet,
-          onChanged: (val) {
-            setState(() {
-              _isDarkMode = val;
-            });
-          },
-        ),
       ),
     );
   }

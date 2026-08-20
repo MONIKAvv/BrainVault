@@ -16,10 +16,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
   late DateTime _selectedDate;
   final VaultRepository _repository = VaultRepository.instance;
 
-  final List<String> _daysOfWeek = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+  final List<String> _daysOfWeek = [
+    'MON',
+    'TUE',
+    'WED',
+    'THU',
+    'FRI',
+    'SAT',
+    'SUN',
+  ];
   final List<String> _monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   @override
@@ -58,7 +76,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   List<TaskItem> get _tasksForSelectedDate {
-    return _repository.tasks.where((t) => _isSameDay(t.dueDate, _selectedDate)).toList();
+    return _repository.tasks
+        .where((t) => _isSameDay(t.dueDate, _selectedDate))
+        .toList();
   }
 
   bool _hasTasksOnDate(DateTime date) {
@@ -67,8 +87,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final daysInMonth = DateTime(_focusedDate.year, _focusedDate.month + 1, 0).day;
-    final firstWeekday = DateTime(_focusedDate.year, _focusedDate.month, 1).weekday; // 1 = Monday, 7 = Sunday
+    final daysInMonth = DateTime(
+      _focusedDate.year,
+      _focusedDate.month + 1,
+      0,
+    ).day;
+    final firstWeekday = DateTime(
+      _focusedDate.year,
+      _focusedDate.month,
+      1,
+    ).weekday; // 1 = Monday, 7 = Sunday
     final leadingBlankSpaces = firstWeekday - 1;
     final totalGridCells = leadingBlankSpaces + daysInMonth;
 
@@ -80,15 +108,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.lightBackground,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textDark, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
+        // leading: IconButton(
+        //   icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textDark, size: 20),
+        //   onPressed: () => Navigator.pop(context),
+        // ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: const Icon(Icons.chevron_left_rounded, color: AppColors.textDark),
+              icon: const Icon(
+                Icons.chevron_left_rounded,
+                color: AppColors.textDark,
+              ),
               onPressed: _previousMonth,
             ),
             Text(
@@ -100,7 +131,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.chevron_right_rounded, color: AppColors.textDark),
+              icon: const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textDark,
+              ),
               onPressed: _nextMonth,
             ),
           ],
@@ -108,7 +142,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_rounded, color: AppColors.textDark, size: 26),
+            icon: const Icon(
+              Icons.add_rounded,
+              color: AppColors.textDark,
+              size: 26,
+            ),
             onPressed: () => _showAddOrEditTaskDialog(),
             tooltip: 'Add Task for Selected Date',
           ),
@@ -141,18 +179,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: _daysOfWeek
-                          .map((day) => Expanded(
-                                child: Center(
-                                  child: Text(
-                                    day,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textDarkSecondary,
-                                    ),
+                          .map(
+                            (day) => Expanded(
+                              child: Center(
+                                child: Text(
+                                  day,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textDarkSecondary,
                                   ),
                                 ),
-                              ))
+                              ),
+                            ),
+                          )
                           .toList(),
                     ),
                     const SizedBox(height: 12),
@@ -161,11 +201,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 7,
-                        mainAxisSpacing: 6,
-                        crossAxisSpacing: 6,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 7,
+                            mainAxisSpacing: 6,
+                            crossAxisSpacing: 6,
+                          ),
                       itemCount: totalGridCells,
                       itemBuilder: (context, index) {
                         final dayNumber = index - leadingBlankSpaces + 1;
@@ -173,7 +214,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           return const SizedBox();
                         }
 
-                        final cellDate = DateTime(_focusedDate.year, _focusedDate.month, dayNumber);
+                        final cellDate = DateTime(
+                          _focusedDate.year,
+                          _focusedDate.month,
+                          dayNumber,
+                        );
                         final isSelected = _isSameDay(cellDate, _selectedDate);
                         final hasTask = _hasTasksOnDate(cellDate);
 
@@ -198,8 +243,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   '$dayNumber',
                                   style: TextStyle(
                                     fontSize: 13,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                    color: isSelected ? Colors.white : AppColors.textDark,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : AppColors.textDark,
                                   ),
                                 ),
                                 if (hasTask)
@@ -208,7 +257,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                     width: 5,
                                     height: 5,
                                     decoration: BoxDecoration(
-                                      color: isSelected ? Colors.white : AppColors.primaryViolet,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : AppColors.primaryViolet,
                                       shape: BoxShape.circle,
                                     ),
                                   ),
@@ -340,7 +391,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 border: Border.all(color: accentColor, width: 2),
               ),
               child: completed
-                  ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                  ? const Icon(
+                      Icons.check_rounded,
+                      size: 14,
+                      color: Colors.white,
+                    )
                   : null,
             ),
           ),
@@ -356,8 +411,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: completed ? AppColors.textDarkSecondary : AppColors.textDark,
-                      decoration: completed ? TextDecoration.lineThrough : TextDecoration.none,
+                      color: completed
+                          ? AppColors.textDarkSecondary
+                          : AppColors.textDark,
+                      decoration: completed
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -373,12 +432,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textDarkSecondary),
+            icon: const Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: AppColors.textDarkSecondary,
+            ),
             onPressed: () => _showAddOrEditTaskDialog(task),
             tooltip: 'Edit Task',
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              size: 18,
+              color: Colors.redAccent,
+            ),
             onPressed: () => _repository.deleteTask(task.id),
             tooltip: 'Delete Task',
           ),
@@ -388,8 +455,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _showAddOrEditTaskDialog([TaskItem? existingTask]) {
-    final titleController = TextEditingController(text: existingTask?.title ?? '');
-    final timeController = TextEditingController(text: existingTask?.time ?? '10:00 AM');
+    final titleController = TextEditingController(
+      text: existingTask?.title ?? '',
+    );
+    final timeController = TextEditingController(
+      text: existingTask?.time ?? '10:00 AM',
+    );
     DateTime selectedDate = existingTask?.dueDate ?? _selectedDate;
 
     showDialog(
@@ -401,15 +472,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 '${selectedDate.day} ${_monthNames[selectedDate.month - 1]} ${selectedDate.year}';
 
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Text(existingTask == null ? 'Add Task for $formattedDateStr' : 'Edit Task'),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Text(
+                existingTask == null
+                    ? 'Add Task for $formattedDateStr'
+                    : 'Edit Task',
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
                     controller: titleController,
                     autofocus: true,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
@@ -419,7 +500,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       filled: false,
                       contentPadding: EdgeInsets.symmetric(vertical: 4),
                       hintText: 'What needs to be done?',
-                      hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 16, fontWeight: FontWeight.normal),
+                      hintStyle: TextStyle(
+                        color: Color(0xFF9CA3AF),
+                        fontSize: 16,
+                        fontWeight: FontWeight.normal,
+                      ),
                     ),
                   ),
                   const Divider(color: AppColors.borderLight, height: 20),
@@ -442,7 +527,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       child: Row(
                         children: [
-                          const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.primaryViolet),
+                          const Icon(
+                            Icons.calendar_today_rounded,
+                            size: 18,
+                            color: AppColors.primaryViolet,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
@@ -450,17 +539,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               children: [
                                 const Text(
                                   'Due Date',
-                                  style: TextStyle(fontSize: 11, color: AppColors.textDarkSecondary),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textDarkSecondary,
+                                  ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   formattedDateStr,
-                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textDark),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: AppColors.textDark,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.edit_calendar_rounded, size: 18, color: AppColors.primaryViolet),
+                          const Icon(
+                            Icons.edit_calendar_rounded,
+                            size: 18,
+                            color: AppColors.primaryViolet,
+                          ),
                         ],
                       ),
                     ),
@@ -468,7 +568,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: timeController,
-                    style: const TextStyle(fontSize: 13, color: AppColors.textDark),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textDark,
+                    ),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
@@ -477,10 +580,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       errorBorder: InputBorder.none,
                       filled: false,
                       contentPadding: EdgeInsets.symmetric(vertical: 4),
-                      prefixIcon: Icon(Icons.access_time_rounded, size: 18, color: AppColors.primaryViolet),
-                      prefixIconConstraints: BoxConstraints(minWidth: 28, minHeight: 18),
+                      prefixIcon: Icon(
+                        Icons.access_time_rounded,
+                        size: 18,
+                        color: AppColors.primaryViolet,
+                      ),
+                      prefixIconConstraints: BoxConstraints(
+                        minWidth: 28,
+                        minHeight: 18,
+                      ),
                       hintText: 'Time (e.g. 10:00 AM)',
-                      hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
+                      hintStyle: TextStyle(
+                        color: Color(0xFF9CA3AF),
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -492,7 +605,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       _repository.deleteTask(existingTask.id);
                       Navigator.pop(context);
                     },
-                    child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                    child: const Text(
+                      'Delete',
+                      style: TextStyle(color: Colors.redAccent),
+                    ),
                   ),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -506,7 +622,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     final titleText = titleController.text.trim();
                     final timeText = timeController.text.trim();
                     if (titleText.isNotEmpty) {
-                      final taskId = existingTask?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+                      final taskId =
+                          existingTask?.id ??
+                          DateTime.now().millisecondsSinceEpoch.toString();
                       final task = TaskItem(
                         id: taskId,
                         title: titleText,
@@ -519,12 +637,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       _repository.saveTask(task);
                       setState(() {
                         _selectedDate = selectedDate;
-                        _focusedDate = DateTime(selectedDate.year, selectedDate.month);
+                        _focusedDate = DateTime(
+                          selectedDate.year,
+                          selectedDate.month,
+                        );
                       });
                     }
                     Navigator.pop(context);
                   },
-                  child: Text(existingTask == null ? 'Add' : 'Save', style: const TextStyle(color: Colors.white)),
+                  child: Text(
+                    existingTask == null ? 'Add' : 'Save',
+                    style: const TextStyle(color: Colors.white),
+                  ),
                 ),
               ],
             );
@@ -538,9 +662,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          top: BorderSide(color: AppColors.borderLight, width: 1),
-        ),
+        border: Border(top: BorderSide(color: AppColors.borderLight, width: 1)),
       ),
       child: BottomNavigationBar(
         currentIndex: 5, // Tasks index

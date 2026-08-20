@@ -88,18 +88,24 @@ class _TasksScreenState extends State<TasksScreen> {
                 ...folders.map((folder) {
                   final isCurrent = task.folderName == folder.name;
                   return ListTile(
-                    leading: Icon(
-                      Icons.folder_rounded,
-                      color: folder.color,
-                    ),
+                    leading: Icon(Icons.folder_rounded, color: folder.color),
                     title: Text(
                       folder.name,
                       style: TextStyle(
-                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                        color: isCurrent ? AppColors.primaryViolet : AppColors.textDark,
+                        fontWeight: isCurrent
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: isCurrent
+                            ? AppColors.primaryViolet
+                            : AppColors.textDark,
                       ),
                     ),
-                    trailing: isCurrent ? const Icon(Icons.check_rounded, color: AppColors.primaryViolet) : null,
+                    trailing: isCurrent
+                        ? const Icon(
+                            Icons.check_rounded,
+                            color: AppColors.primaryViolet,
+                          )
+                        : null,
                     onTap: () {
                       Navigator.pop(ctx);
                       _repository.moveTaskToFolder(task.id, folder.name);
@@ -115,8 +121,14 @@ class _TasksScreenState extends State<TasksScreen> {
               if (task.folderName != null) ...[
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.folder_off_outlined, color: AppColors.error),
-                  title: const Text('Remove from Folder', style: TextStyle(color: AppColors.error)),
+                  leading: const Icon(
+                    Icons.folder_off_outlined,
+                    color: AppColors.error,
+                  ),
+                  title: const Text(
+                    'Remove from Folder',
+                    style: TextStyle(color: AppColors.error),
+                  ),
                   onTap: () {
                     Navigator.pop(ctx);
                     _repository.moveTaskToFolder(task.id, null);
@@ -128,7 +140,7 @@ class _TasksScreenState extends State<TasksScreen> {
                     );
                   },
                 ),
-              ]
+              ],
             ],
           ),
         ),
@@ -145,7 +157,8 @@ class _TasksScreenState extends State<TasksScreen> {
         return allTasks.where((t) => t.isPinned).toList();
       case 2: // Today
         return allTasks.where((t) {
-          final isSameDay = t.dueDate.year == now.year &&
+          final isSameDay =
+              t.dueDate.year == now.year &&
               t.dueDate.month == now.month &&
               t.dueDate.day == now.day;
           return isSameDay;
@@ -169,10 +182,10 @@ class _TasksScreenState extends State<TasksScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.lightBackground,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.menu_rounded, color: AppColors.textDark),
-          onPressed: () {},
-        ),
+        // leading: IconButton(
+        //   icon: const Icon(Icons.menu_rounded, color: AppColors.textDark),
+        //   onPressed: () {},
+        // ),
         title: const Text(
           'My Tasks',
           style: TextStyle(
@@ -221,9 +234,7 @@ class _TasksScreenState extends State<TasksScreen> {
         onPressed: () => _showAddOrEditTaskDialog(),
         backgroundColor: AppColors.primaryViolet,
         elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
       ),
       bottomNavigationBar: _buildBottomNavigationBar(context),
@@ -282,8 +293,10 @@ class _TasksScreenState extends State<TasksScreen> {
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected ? AppColors.primaryViolet : Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -297,9 +310,10 @@ class _TasksScreenState extends State<TasksScreen> {
                   _filters[index],
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.w500,
-                    color: isSelected ? Colors.white : AppColors.textDarkSecondary,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected
+                        ? Colors.white
+                        : AppColors.textDarkSecondary,
                   ),
                 ),
               ),
@@ -313,8 +327,22 @@ class _TasksScreenState extends State<TasksScreen> {
   Widget _buildTaskTile(TaskItem task) {
     final Color accentColor = task.color;
     final bool completed = task.completed;
-    final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    final dateDisplay = '${task.dueDate.day} ${monthNames[task.dueDate.month - 1]} ${task.dueDate.year}';
+    final monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final dateDisplay =
+        '${task.dueDate.day} ${monthNames[task.dueDate.month - 1]} ${task.dueDate.year}';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10.0),
@@ -341,14 +369,14 @@ class _TasksScreenState extends State<TasksScreen> {
                   decoration: BoxDecoration(
                     color: completed ? accentColor : Colors.white,
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: accentColor,
-                      width: 2,
-                    ),
+                    border: Border.all(color: accentColor, width: 2),
                   ),
                   child: completed
-                      ? const Icon(Icons.check_rounded,
-                          size: 14, color: Colors.white)
+                      ? const Icon(
+                          Icons.check_rounded,
+                          size: 14,
+                          color: Colors.white,
+                        )
                       : null,
                 ),
               ),
@@ -379,9 +407,14 @@ class _TasksScreenState extends State<TasksScreen> {
                           if (task.folderName != null) ...[
                             const SizedBox(width: 6),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: AppColors.primaryViolet.withValues(alpha: 0.1),
+                                color: AppColors.primaryViolet.withValues(
+                                  alpha: 0.1,
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -399,7 +432,11 @@ class _TasksScreenState extends State<TasksScreen> {
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          const Icon(Icons.calendar_today_rounded, size: 12, color: AppColors.textDarkSecondary),
+                          const Icon(
+                            Icons.calendar_today_rounded,
+                            size: 12,
+                            color: AppColors.textDarkSecondary,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             '$dateDisplay · ${task.time}',
@@ -416,16 +453,22 @@ class _TasksScreenState extends State<TasksScreen> {
               ),
               IconButton(
                 icon: Icon(
-                  task.isPinned ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
+                  task.isPinned
+                      ? Icons.bookmark_rounded
+                      : Icons.bookmark_outline_rounded,
                   size: 18,
-                  color: task.isPinned ? AppColors.primaryViolet : AppColors.textDarkSecondary,
+                  color: task.isPinned
+                      ? AppColors.primaryViolet
+                      : AppColors.textDarkSecondary,
                 ),
                 onPressed: () {
                   _repository.toggleTaskPin(task.id);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        task.isPinned ? 'Unpinned task' : 'Moved task to Pinned',
+                        task.isPinned
+                            ? 'Unpinned task'
+                            : 'Moved task to Pinned',
                       ),
                       duration: const Duration(seconds: 1),
                     ),
@@ -434,12 +477,20 @@ class _TasksScreenState extends State<TasksScreen> {
                 tooltip: task.isPinned ? 'Unpin Task' : 'Pin Task',
               ),
               IconButton(
-                icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textDarkSecondary),
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  size: 18,
+                  color: AppColors.textDarkSecondary,
+                ),
                 onPressed: () => _showAddOrEditTaskDialog(task),
                 tooltip: 'Edit Task',
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  size: 18,
+                  color: Colors.redAccent,
+                ),
                 onPressed: () => _showDeleteConfirmation(task),
                 tooltip: 'Delete Task',
               ),
@@ -463,9 +514,7 @@ class _TasksScreenState extends State<TasksScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () {
               _repository.deleteTask(task.id);
               Navigator.pop(context);
@@ -477,21 +526,45 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  void _showAddOrEditTaskDialog([TaskItem? existingTask, DateTime? defaultDate]) {
-    final titleController = TextEditingController(text: existingTask?.title ?? '');
-    final timeController = TextEditingController(text: existingTask?.time ?? '10:00 AM');
-    DateTime selectedDate = existingTask?.dueDate ?? defaultDate ?? DateTime.now();
+  void _showAddOrEditTaskDialog([
+    TaskItem? existingTask,
+    DateTime? defaultDate,
+  ]) {
+    final titleController = TextEditingController(
+      text: existingTask?.title ?? '',
+    );
+    final timeController = TextEditingController(
+      text: existingTask?.time ?? '10:00 AM',
+    );
+    DateTime selectedDate =
+        existingTask?.dueDate ?? defaultDate ?? DateTime.now();
 
     showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            final formattedDateStr = '${selectedDate.day} ${monthNames[selectedDate.month - 1]} ${selectedDate.year}';
+            final monthNames = [
+              'Jan',
+              'Feb',
+              'Mar',
+              'Apr',
+              'May',
+              'Jun',
+              'Jul',
+              'Aug',
+              'Sep',
+              'Oct',
+              'Nov',
+              'Dec',
+            ];
+            final formattedDateStr =
+                '${selectedDate.day} ${monthNames[selectedDate.month - 1]} ${selectedDate.year}';
 
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               title: Text(existingTask == null ? 'Add New Task' : 'Edit Task'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -499,7 +572,11 @@ class _TasksScreenState extends State<TasksScreen> {
                   TextField(
                     controller: titleController,
                     autofocus: true,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
@@ -509,7 +586,11 @@ class _TasksScreenState extends State<TasksScreen> {
                       filled: false,
                       contentPadding: EdgeInsets.symmetric(vertical: 4),
                       hintText: 'What needs to be done?',
-                      hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 16, fontWeight: FontWeight.normal),
+                      hintStyle: TextStyle(
+                        color: Color(0xFF9CA3AF),
+                        fontSize: 16,
+                        fontWeight: FontWeight.normal,
+                      ),
                     ),
                   ),
                   const Divider(color: AppColors.borderLight, height: 20),
@@ -532,7 +613,11 @@ class _TasksScreenState extends State<TasksScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       child: Row(
                         children: [
-                          const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.primaryViolet),
+                          const Icon(
+                            Icons.calendar_today_rounded,
+                            size: 18,
+                            color: AppColors.primaryViolet,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
@@ -540,17 +625,28 @@ class _TasksScreenState extends State<TasksScreen> {
                               children: [
                                 const Text(
                                   'Due Date',
-                                  style: TextStyle(fontSize: 11, color: AppColors.textDarkSecondary),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textDarkSecondary,
+                                  ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   formattedDateStr,
-                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textDark),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: AppColors.textDark,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.edit_calendar_rounded, size: 18, color: AppColors.primaryViolet),
+                          const Icon(
+                            Icons.edit_calendar_rounded,
+                            size: 18,
+                            color: AppColors.primaryViolet,
+                          ),
                         ],
                       ),
                     ),
@@ -558,7 +654,10 @@ class _TasksScreenState extends State<TasksScreen> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: timeController,
-                    style: const TextStyle(fontSize: 13, color: AppColors.textDark),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textDark,
+                    ),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
@@ -567,10 +666,20 @@ class _TasksScreenState extends State<TasksScreen> {
                       errorBorder: InputBorder.none,
                       filled: false,
                       contentPadding: EdgeInsets.symmetric(vertical: 4),
-                      prefixIcon: Icon(Icons.access_time_rounded, size: 18, color: AppColors.primaryViolet),
-                      prefixIconConstraints: BoxConstraints(minWidth: 28, minHeight: 18),
+                      prefixIcon: Icon(
+                        Icons.access_time_rounded,
+                        size: 18,
+                        color: AppColors.primaryViolet,
+                      ),
+                      prefixIconConstraints: BoxConstraints(
+                        minWidth: 28,
+                        minHeight: 18,
+                      ),
                       hintText: 'Time (e.g. 10:00 AM)',
-                      hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
+                      hintStyle: TextStyle(
+                        color: Color(0xFF9CA3AF),
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -582,7 +691,10 @@ class _TasksScreenState extends State<TasksScreen> {
                       Navigator.pop(context);
                       _showDeleteConfirmation(existingTask);
                     },
-                    child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                    child: const Text(
+                      'Delete',
+                      style: TextStyle(color: Colors.redAccent),
+                    ),
                   ),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -596,7 +708,9 @@ class _TasksScreenState extends State<TasksScreen> {
                     final titleText = titleController.text.trim();
                     final timeText = timeController.text.trim();
                     if (titleText.isNotEmpty) {
-                      final taskId = existingTask?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+                      final taskId =
+                          existingTask?.id ??
+                          DateTime.now().millisecondsSinceEpoch.toString();
                       final task = TaskItem(
                         id: taskId,
                         title: titleText,
@@ -610,7 +724,10 @@ class _TasksScreenState extends State<TasksScreen> {
                     }
                     Navigator.pop(context);
                   },
-                  child: Text(existingTask == null ? 'Add' : 'Save', style: const TextStyle(color: Colors.white)),
+                  child: Text(
+                    existingTask == null ? 'Add' : 'Save',
+                    style: const TextStyle(color: Colors.white),
+                  ),
                 ),
               ],
             );
@@ -624,9 +741,7 @@ class _TasksScreenState extends State<TasksScreen> {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          top: BorderSide(color: AppColors.borderLight, width: 1),
-        ),
+        border: Border(top: BorderSide(color: AppColors.borderLight, width: 1)),
       ),
       child: BottomNavigationBar(
         currentIndex: 5, // Tasks index

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/repositories/vault_repository.dart';
+import '../../../../core/services/streak_service.dart';
 
 /// Screen #7: Home Dashboard
 class HomeScreen extends StatefulWidget {
@@ -20,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _repository.addListener(_onRepositoryChanged);
+    StreakService.recordTodayActivity();
   }
 
   @override
@@ -195,7 +197,9 @@ class _HomeScreenState extends State<HomeScreen> {
               color: AppColors.textDark,
               size: 22,
             ),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.pushNamed(context, AppRouter.remainder);
+            },
           ),
         ),
       ],
@@ -355,12 +359,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildNoteTile({
-    required NoteItem note,
-    required VoidCallback onTap,
-  }) {
-    final customLetter = note.title.isNotEmpty ? note.title[0].toUpperCase() : 'N';
-    final subtitle = note.subtitle.isNotEmpty ? note.subtitle : _formatDate(note.createdAt);
+  Widget _buildNoteTile({required NoteItem note, required VoidCallback onTap}) {
+    final customLetter = note.title.isNotEmpty
+        ? note.title[0].toUpperCase()
+        : 'N';
+    final subtitle = note.subtitle.isNotEmpty
+        ? note.subtitle
+        : _formatDate(note.createdAt);
 
     return InkWell(
       onTap: onTap,
@@ -418,8 +423,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             IconButton(
               icon: Icon(
-                note.isPinned ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
-                color: note.isPinned ? AppColors.primaryViolet : AppColors.textDarkSecondary,
+                note.isPinned
+                    ? Icons.bookmark_rounded
+                    : Icons.bookmark_outline_rounded,
+                color: note.isPinned
+                    ? AppColors.primaryViolet
+                    : AppColors.textDarkSecondary,
                 size: 20,
               ),
               onPressed: () {
@@ -600,11 +609,27 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            final formattedDateStr = '${selectedDate.day} ${monthNames[selectedDate.month - 1]} ${selectedDate.year}';
+            final monthNames = [
+              'Jan',
+              'Feb',
+              'Mar',
+              'Apr',
+              'May',
+              'Jun',
+              'Jul',
+              'Aug',
+              'Sep',
+              'Oct',
+              'Nov',
+              'Dec',
+            ];
+            final formattedDateStr =
+                '${selectedDate.day} ${monthNames[selectedDate.month - 1]} ${selectedDate.year}';
 
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               title: const Text('Edit Task'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -612,7 +637,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   TextField(
                     controller: titleController,
                     autofocus: true,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
@@ -622,7 +651,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       filled: false,
                       contentPadding: EdgeInsets.symmetric(vertical: 4),
                       hintText: 'What needs to be done?',
-                      hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 16, fontWeight: FontWeight.normal),
+                      hintStyle: TextStyle(
+                        color: Color(0xFF9CA3AF),
+                        fontSize: 16,
+                        fontWeight: FontWeight.normal,
+                      ),
                     ),
                   ),
                   const Divider(color: AppColors.borderLight, height: 20),
@@ -641,11 +674,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
                         setDialogState(() {
                           selectedDate = pickedDate;
-                          final dateStr = '${pickedDate.day} ${monthNames[pickedDate.month - 1]} ${pickedDate.year}';
+                          final dateStr =
+                              '${pickedDate.day} ${monthNames[pickedDate.month - 1]} ${pickedDate.year}';
                           if (pickedTime != null) {
-                            final h = pickedTime.hourOfPeriod == 0 ? 12 : pickedTime.hourOfPeriod;
-                            final ampm = pickedTime.period == DayPeriod.am ? 'AM' : 'PM';
-                            final m = pickedTime.minute.toString().padLeft(2, '0');
+                            final h = pickedTime.hourOfPeriod == 0
+                                ? 12
+                                : pickedTime.hourOfPeriod;
+                            final ampm = pickedTime.period == DayPeriod.am
+                                ? 'AM'
+                                : 'PM';
+                            final m = pickedTime.minute.toString().padLeft(
+                              2,
+                              '0',
+                            );
                             selectedTimeDisplay = '$dateStr · $h:$m $ampm';
                           } else {
                             selectedTimeDisplay = dateStr;
@@ -658,7 +699,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       child: Row(
                         children: [
-                          const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.primaryViolet),
+                          const Icon(
+                            Icons.calendar_today_rounded,
+                            size: 18,
+                            color: AppColors.primaryViolet,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
@@ -666,17 +711,30 @@ class _HomeScreenState extends State<HomeScreen> {
                               children: [
                                 const Text(
                                   'Due Date & Time',
-                                  style: TextStyle(fontSize: 11, color: AppColors.textDarkSecondary),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textDarkSecondary,
+                                  ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  selectedTimeDisplay.isNotEmpty ? selectedTimeDisplay : formattedDateStr,
-                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textDark),
+                                  selectedTimeDisplay.isNotEmpty
+                                      ? selectedTimeDisplay
+                                      : formattedDateStr,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: AppColors.textDark,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.edit_calendar_rounded, size: 18, color: AppColors.primaryViolet),
+                          const Icon(
+                            Icons.edit_calendar_rounded,
+                            size: 18,
+                            color: AppColors.primaryViolet,
+                          ),
                         ],
                       ),
                     ),
@@ -701,7 +759,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryViolet,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: () {
                     final titleText = titleController.text.trim();
@@ -715,7 +775,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     }
                     Navigator.pop(context);
                   },
-                  child: const Text('Save', style: TextStyle(color: Colors.white)),
+                  child: const Text(
+                    'Save',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ],
             );
