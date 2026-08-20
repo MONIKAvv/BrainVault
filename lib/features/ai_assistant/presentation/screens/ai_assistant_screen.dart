@@ -118,7 +118,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     final now = DateTime.now();
     final urlMatch = RegExp(r'https?://[^\s]+').firstMatch(promptText);
     final extractedUrl = urlMatch != null ? urlMatch.group(0)! : '';
-    final isYouTube = extractedUrl.toLowerCase().contains('youtube.com') ||
+    final isYouTube =
+        extractedUrl.toLowerCase().contains('youtube.com') ||
         extractedUrl.toLowerCase().contains('youtu.be');
 
     try {
@@ -161,8 +162,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       } else if (mode == AiMode.mindmap) {
         final result = await _geminiService.generateMindMapContent(promptText);
         final title = (result['title'] as String?) ?? 'AI Mind Map';
-        final centralTopic =
-            (result['centralTopic'] as String?) ?? title;
+        final centralTopic = (result['centralTopic'] as String?) ?? title;
         final branchesRaw = result['branches'] as List<dynamic>? ?? [];
 
         final List<MindMapNode> nodes = [];
@@ -173,11 +173,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
             final childrenRaw = b['children'] as List<dynamic>? ?? [];
             final children = childrenRaw.map((c) => c.toString()).toList();
             nodes.add(
-              MindMapNode(
-                id: 'node_$i',
-                label: label,
-                children: children,
-              ),
+              MindMapNode(id: 'node_$i', label: label, children: children),
             );
           }
         }
@@ -265,7 +261,11 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '✓ Saved to ${mode == AiMode.note ? "Notes" : mode == AiMode.mindmap ? "Mind Map" : "Summary"} section!',
+            '✓ Saved to ${mode == AiMode.note
+                ? "Notes"
+                : mode == AiMode.mindmap
+                ? "Mind Map"
+                : "Summary"} section!',
           ),
           backgroundColor: AppColors.primaryViolet,
           duration: const Duration(seconds: 2),
@@ -321,12 +321,12 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert_rounded, color: AppColors.textDark),
-            onPressed: () {},
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.more_vert_rounded, color: AppColors.textDark),
+        //     onPressed: () {},
+        //   ),
+        // ],
       ),
       body: SafeArea(
         child: Column(
@@ -338,8 +338,10 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 12.0,
+                ),
                 physics: const BouncingScrollPhysics(),
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
@@ -352,7 +354,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                   } else if (type == 'loading') {
                     return _buildLoadingBubble();
                   } else if (type == 'error') {
-                    return _buildErrorBubble(msg['error'] as String? ?? 'Unknown error');
+                    return _buildErrorBubble(
+                      msg['error'] as String? ?? 'Unknown error',
+                    );
                   } else if (type == 'options') {
                     return _buildOptionsBubble(msg);
                   } else if (type == 'note') {
@@ -437,17 +441,16 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
           _selectedMode = mode;
         });
         if (_lastPrompt.isNotEmpty && !_isLoading) {
-          _triggerOutputGeneration(
-            mode: mode,
-            promptText: _lastPrompt,
-          );
+          _triggerOutputGeneration(mode: mode, promptText: _lastPrompt);
         }
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryViolet : AppColors.lightBackground,
+          color: isSelected
+              ? AppColors.primaryViolet
+              : AppColors.lightBackground,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? AppColors.primaryViolet : AppColors.borderLight,
@@ -531,7 +534,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
               height: 16,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryViolet),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppColors.primaryViolet,
+                ),
               ),
             ),
             SizedBox(width: 10),
@@ -626,7 +631,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.primaryViolet.withValues(alpha: 0.3)),
+          border: Border.all(
+            color: AppColors.primaryViolet.withValues(alpha: 0.3),
+          ),
           boxShadow: [
             BoxShadow(
               color: AppColors.primaryViolet.withValues(alpha: 0.05),
@@ -810,25 +817,32 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
             ),
             if (bullets.isNotEmpty) ...[
               const SizedBox(height: 10),
-              ...bullets.map((bullet) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('• ',
-                            style: TextStyle(
-                                color: AppColors.primaryViolet,
-                                fontWeight: FontWeight.bold)),
-                        Expanded(
-                          child: Text(
-                            bullet,
-                            style: const TextStyle(
-                                fontSize: 12, color: AppColors.textDark),
+              ...bullets.map(
+                (bullet) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '• ',
+                        style: TextStyle(
+                          color: AppColors.primaryViolet,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          bullet,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textDark,
                           ),
                         ),
-                      ],
-                    ),
-                  )),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ],
         ),
@@ -839,7 +853,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   Widget _buildGeneratedMindMapBubble(Map<String, dynamic> msg) {
     final title = msg['title'] as String? ?? 'Generated Mind Map';
     final centralTopic = msg['centralTopic'] as String? ?? title;
-    final branches = (msg['branches'] as List<dynamic>?)?.cast<MindMapNode>() ?? [];
+    final branches =
+        (msg['branches'] as List<dynamic>?)?.cast<MindMapNode>() ?? [];
     final savedTo = msg['savedTo'] as String? ?? 'Mind Map section';
 
     return Align(
@@ -963,25 +978,32 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
             ),
             if (bullets.isNotEmpty) ...[
               const SizedBox(height: 10),
-              ...bullets.map((bullet) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('• ',
-                            style: TextStyle(
-                                color: Color(0xD9D97706),
-                                fontWeight: FontWeight.bold)),
-                        Expanded(
-                          child: Text(
-                            bullet,
-                            style: const TextStyle(
-                                fontSize: 12, color: AppColors.textDark),
+              ...bullets.map(
+                (bullet) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '• ',
+                        style: TextStyle(
+                          color: Color(0xD9D97706),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          bullet,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textDark,
                           ),
                         ),
-                      ],
-                    ),
-                  )),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ],
         ),
@@ -999,8 +1021,11 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.check_circle_rounded,
-              color: Color(0xFF10B981), size: 12),
+          const Icon(
+            Icons.check_circle_rounded,
+            color: Color(0xFF10B981),
+            size: 12,
+          ),
           const SizedBox(width: 4),
           Text(
             'Saved',
@@ -1029,9 +1054,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          top: BorderSide(color: AppColors.borderLight, width: 1),
-        ),
+        border: Border(top: BorderSide(color: AppColors.borderLight, width: 1)),
       ),
       child: Row(
         children: [
@@ -1101,9 +1124,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          top: BorderSide(color: AppColors.borderLight, width: 1),
-        ),
+        border: Border(top: BorderSide(color: AppColors.borderLight, width: 1)),
       ),
       child: BottomNavigationBar(
         currentIndex: 3, // AI Assistant index

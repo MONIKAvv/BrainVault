@@ -88,18 +88,24 @@ class _NotesListScreenState extends State<NotesListScreen> {
                 ...folders.map((folder) {
                   final isCurrent = note.folderName == folder.name;
                   return ListTile(
-                    leading: Icon(
-                      Icons.folder_rounded,
-                      color: folder.color,
-                    ),
+                    leading: Icon(Icons.folder_rounded, color: folder.color),
                     title: Text(
                       folder.name,
                       style: TextStyle(
-                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                        color: isCurrent ? AppColors.primaryViolet : AppColors.textDark,
+                        fontWeight: isCurrent
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: isCurrent
+                            ? AppColors.primaryViolet
+                            : AppColors.textDark,
                       ),
                     ),
-                    trailing: isCurrent ? const Icon(Icons.check_rounded, color: AppColors.primaryViolet) : null,
+                    trailing: isCurrent
+                        ? const Icon(
+                            Icons.check_rounded,
+                            color: AppColors.primaryViolet,
+                          )
+                        : null,
                     onTap: () {
                       Navigator.pop(ctx);
                       _repository.moveNoteToFolder(note.id, folder.name);
@@ -115,8 +121,14 @@ class _NotesListScreenState extends State<NotesListScreen> {
               if (note.folderName != null) ...[
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.folder_off_outlined, color: AppColors.error),
-                  title: const Text('Remove from Folder', style: TextStyle(color: AppColors.error)),
+                  leading: const Icon(
+                    Icons.folder_off_outlined,
+                    color: AppColors.error,
+                  ),
+                  title: const Text(
+                    'Remove from Folder',
+                    style: TextStyle(color: AppColors.error),
+                  ),
                   onTap: () {
                     Navigator.pop(ctx);
                     _repository.moveNoteToFolder(note.id, null);
@@ -128,7 +140,7 @@ class _NotesListScreenState extends State<NotesListScreen> {
                     );
                   },
                 ),
-              ]
+              ],
             ],
           ),
         ),
@@ -148,10 +160,10 @@ class _NotesListScreenState extends State<NotesListScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.lightBackground,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.menu_rounded, color: AppColors.textDark),
-          onPressed: () {},
-        ),
+        // leading: IconButton(
+        //   icon: const Icon(Icons.menu_rounded, color: AppColors.textDark),
+        //   onPressed: () {},
+        // ),
         title: const Text(
           'All Notes',
           style: TextStyle(
@@ -161,15 +173,15 @@ class _NotesListScreenState extends State<NotesListScreen> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.notifications_none_rounded,
-              color: AppColors.textDark,
-            ),
-            onPressed: () {},
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(
+        //       Icons.notifications_none_rounded,
+        //       color: AppColors.textDark,
+        //     ),
+        //     onPressed: () {},
+        //   ),
+        // ],
       ),
       body: SafeArea(
         child: Padding(
@@ -329,11 +341,7 @@ class _NotesListScreenState extends State<NotesListScreen> {
   Widget _buildNoteCard({required NoteItem note}) {
     return InkWell(
       onTap: () {
-        Navigator.pushNamed(
-          context,
-          AppRouter.noteEditor,
-          arguments: note,
-        );
+        Navigator.pushNamed(context, AppRouter.noteEditor, arguments: note);
       },
       onLongPress: () => _showFolderPicker(note),
       borderRadius: BorderRadius.circular(16),
@@ -375,9 +383,14 @@ class _NotesListScreenState extends State<NotesListScreen> {
                       if (note.folderName != null) ...[
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryViolet.withValues(alpha: 0.1),
+                            color: AppColors.primaryViolet.withValues(
+                              alpha: 0.1,
+                            ),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -405,8 +418,12 @@ class _NotesListScreenState extends State<NotesListScreen> {
             ),
             IconButton(
               icon: Icon(
-                note.isPinned ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
-                color: note.isPinned ? AppColors.primaryViolet : AppColors.textDarkSecondary,
+                note.isPinned
+                    ? Icons.bookmark_rounded
+                    : Icons.bookmark_outline_rounded,
+                color: note.isPinned
+                    ? AppColors.primaryViolet
+                    : AppColors.textDarkSecondary,
                 size: 20,
               ),
               onPressed: () {
